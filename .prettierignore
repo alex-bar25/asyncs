@@ -3,4 +3,4 @@ dist
 coverage
 bun.lock
 AGENTS.md
-docs/superpowers
+docs
