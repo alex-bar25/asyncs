@@ -42,6 +42,7 @@ describe("runCli", () => {
     expect(result.stdout).toContain("Mode: low-noise");
     expect(result.stdout).toContain("Agents: auto");
     expect(result.stdout).toContain("Post comments: false");
+    expect(result.stdout).toContain("Dry run: false");
   });
 
   test("previews a PR review request with explicit options", () => {
@@ -54,12 +55,14 @@ describe("runCli", () => {
       "--agents",
       "backend,security",
       "--post-comments",
+      "--dry-run",
     ]);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Mode: security");
     expect(result.stdout).toContain("Agents: backend,security");
     expect(result.stdout).toContain("Post comments: true");
+    expect(result.stdout).toContain("Dry run: true");
   });
 
   test("rejects invalid PR review options", () => {

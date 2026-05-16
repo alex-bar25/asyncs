@@ -32,6 +32,14 @@ export type ChangedFile = {
   patch?: string;
 };
 
+export type ReviewRequest = {
+  prNumber: number;
+  mode: ReviewMode;
+  agents: AgentKind[];
+  postComments: boolean;
+  dryRun: boolean;
+};
+
 export type ReviewFinding = {
   agent: AgentKind | string;
   title: string;

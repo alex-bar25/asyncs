@@ -1,6 +1,12 @@
-import { isAgentKind, isReviewMode, type AgentKind } from "@asyncs/core";
-import { AUTO_AGENT_SELECTION_LABEL, DEFAULT_PR_REVIEW_OPTIONS, PR_REVIEW_OPTIONS } from "./constants";
-import type { CliResult, ParseResult, PrReviewOptions } from "./types";
+import {
+  DEFAULT_REVIEW_REQUEST_OPTIONS,
+  isAgentKind,
+  isReviewMode,
+  type AgentKind,
+  type ReviewRequest,
+} from "@asyncs/core";
+import { AUTO_AGENT_SELECTION_LABEL, PR_REVIEW_OPTIONS } from "./constants";
+import type { CliResult, ParseResult } from "./types";
 
 export function runPrReviewCommand(args: readonly string[]): CliResult {
   const parsed = parsePrReviewArgs(args);
@@ -20,7 +26,7 @@ export function runPrReviewCommand(args: readonly string[]): CliResult {
   };
 }
 
-function parsePrReviewArgs(args: readonly string[]): ParseResult<PrReviewOptions> {
+function parsePrReviewArgs(args: readonly string[]): ParseResult<ReviewRequest> {
   const [prNumberValue, ...optionArgs] = args;
   const prNumber = Number(prNumberValue);
 
@@ -31,11 +37,12 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult<PrReviewOptions
     };
   }
 
-  const options: PrReviewOptions = {
+  const options: ReviewRequest = {
     prNumber,
-    mode: DEFAULT_PR_REVIEW_OPTIONS.mode,
-    agents: [...DEFAULT_PR_REVIEW_OPTIONS.agents],
-    postComments: DEFAULT_PR_REVIEW_OPTIONS.postComments,
+    mode: DEFAULT_REVIEW_REQUEST_OPTIONS.mode,
+    agents: [...DEFAULT_REVIEW_REQUEST_OPTIONS.agents],
+    postComments: DEFAULT_REVIEW_REQUEST_OPTIONS.postComments,
+    dryRun: DEFAULT_REVIEW_REQUEST_OPTIONS.dryRun,
   };
 
   for (let index = 0; index < optionArgs.length; index += 1) {
@@ -43,6 +50,11 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult<PrReviewOptions
 
     if (option === PR_REVIEW_OPTIONS.postComments) {
       options.postComments = true;
+      continue;
+    }
+
+    if (option === PR_REVIEW_OPTIONS.dryRun) {
+      options.dryRun = true;
       continue;
     }
 
@@ -90,7 +102,7 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult<PrReviewOptions
   return { ok: true, value: options };
 }
 
-function renderPrReviewPreview(options: PrReviewOptions): string {
+function renderPrReviewPreview(options: ReviewRequest): string {
   const agents = options.agents.length > 0 ? options.agents.join(",") : AUTO_AGENT_SELECTION_LABEL;
 
   return `Review request
@@ -98,5 +110,6 @@ PR: ${options.prNumber}
 Mode: ${options.mode}
 Agents: ${agents}
 Post comments: ${options.postComments}
+Dry run: ${options.dryRun}
 `;
 }

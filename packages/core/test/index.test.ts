@@ -4,6 +4,7 @@ import {
   ASYNCS_DESCRIPTION,
   ASYNCS_PACKAGE_NAME,
   DEFAULT_REVIEW_MODE,
+  DEFAULT_REVIEW_REQUEST_OPTIONS,
   REVIEW_CONFIDENCES,
   REVIEW_MODES,
   REVIEW_SEVERITIES,
@@ -12,6 +13,7 @@ import {
   isReviewMode,
   isSeverity,
   type AgentDefinition,
+  type ReviewRequest,
   type ReviewFinding,
   type ReviewReport,
 } from "../src/index";
@@ -27,6 +29,12 @@ describe("core metadata", () => {
     expect(REVIEW_CONFIDENCES).toEqual(["low", "medium", "high"]);
     expect(REVIEW_MODES).toEqual(["low-noise", "full", "security", "architecture", "testing"]);
     expect(DEFAULT_REVIEW_MODE).toBe("low-noise");
+    expect(DEFAULT_REVIEW_REQUEST_OPTIONS).toEqual({
+      mode: "low-noise",
+      agents: [],
+      postComments: false,
+      dryRun: false,
+    });
     expect(AGENT_KINDS).toContain("backend");
     expect(AGENT_KINDS).toContain("security");
   });
@@ -76,5 +84,18 @@ describe("core metadata", () => {
 
     expect(report.findings).toHaveLength(1);
     expect(report.findings[0]?.severity).toBe("high");
+  });
+
+  test("supports typed review requests", () => {
+    const request: ReviewRequest = {
+      prNumber: 3213,
+      mode: "low-noise",
+      agents: ["backend", "security"],
+      postComments: false,
+      dryRun: true,
+    };
+
+    expect(request.agents).toEqual(["backend", "security"]);
+    expect(request.dryRun).toBe(true);
   });
 });
