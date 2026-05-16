@@ -41,6 +41,8 @@ describe("runCli", () => {
     expect(result.stdout).toContain("PR: 3213");
     expect(result.stdout).toContain("Mode: low-noise");
     expect(result.stdout).toContain("Agents: auto");
+    expect(result.stdout).toContain("Route source: auto");
+    expect(result.stdout).toContain("Resolved agents: backend,security,architecture,testing");
     expect(result.stdout).toContain("Post comments: false");
     expect(result.stdout).toContain("Dry run: false");
   });
@@ -61,6 +63,8 @@ describe("runCli", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Mode: security");
     expect(result.stdout).toContain("Agents: backend,security");
+    expect(result.stdout).toContain("Route source: explicit");
+    expect(result.stdout).toContain("Resolved agents: backend,security");
     expect(result.stdout).toContain("Post comments: true");
     expect(result.stdout).toContain("Dry run: true");
   });

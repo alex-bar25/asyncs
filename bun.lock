@@ -21,6 +21,7 @@
       },
       "dependencies": {
         "@asyncs/core": "workspace:*",
+        "@asyncs/routing": "workspace:*",
       },
     },
     "packages/agents": {
