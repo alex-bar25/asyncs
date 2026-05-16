@@ -2,3 +2,5 @@ node_modules
 dist
 coverage
 bun.lock
+AGENTS.md
+docs/superpowers

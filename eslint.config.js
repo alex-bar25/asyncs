@@ -13,10 +13,7 @@ export default tseslint.config(
       parserOptions: { tsconfigRootDir: import.meta.dirname },
     },
     rules: {
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        { prefer: "type-imports" },
-      ],
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
     },
   },
 );

@@ -1,0 +1,12 @@
+{
+  "name": "asyncs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "asyncs": "./src/main.ts"
+  },
+  "dependencies": {
+    "@asyncs/core": "workspace:*"
+  }
+}
