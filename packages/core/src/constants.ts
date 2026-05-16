@@ -8,6 +8,8 @@ export const REVIEW_CONFIDENCES = ["low", "medium", "high"] as const;
 
 export const REVIEW_MODES = ["low-noise", "full", "security", "architecture", "testing"] as const;
 
+export const DEFAULT_REVIEW_MODE = REVIEW_MODES[0];
+
 export const AGENT_KINDS = [
   "backend",
   "frontend",

@@ -25,3 +25,9 @@ Run the CLI locally:
 ```bash
 bun apps/cli/src/main.ts --help
 ```
+
+Preview a PR review request:
+
+```bash
+bun apps/cli/src/main.ts pr review 3213 --mode security --agents backend,security
+```

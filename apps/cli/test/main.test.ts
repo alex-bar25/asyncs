@@ -32,4 +32,40 @@ describe("runCli", () => {
     expect(result.stderr).toContain("Unknown argument: --wat");
     expect(result.stdout).toContain("Usage:");
   });
+
+  test("previews a PR review request with default options", () => {
+    const result = runCli(["pr", "review", "3213"]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Review request");
+    expect(result.stdout).toContain("PR: 3213");
+    expect(result.stdout).toContain("Mode: low-noise");
+    expect(result.stdout).toContain("Agents: auto");
+    expect(result.stdout).toContain("Post comments: false");
+  });
+
+  test("previews a PR review request with explicit options", () => {
+    const result = runCli([
+      "pr",
+      "review",
+      "3213",
+      "--mode",
+      "security",
+      "--agents",
+      "backend,security",
+      "--post-comments",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Mode: security");
+    expect(result.stdout).toContain("Agents: backend,security");
+    expect(result.stdout).toContain("Post comments: true");
+  });
+
+  test("rejects invalid PR review options", () => {
+    const result = runCli(["pr", "review", "0", "--mode", "noisy"]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("PR number must be a positive integer.");
+  });
 });

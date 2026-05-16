@@ -3,10 +3,13 @@ import {
   AGENT_KINDS,
   ASYNCS_DESCRIPTION,
   ASYNCS_PACKAGE_NAME,
+  DEFAULT_REVIEW_MODE,
   REVIEW_CONFIDENCES,
   REVIEW_MODES,
   REVIEW_SEVERITIES,
   isConfidence,
+  isAgentKind,
+  isReviewMode,
   isSeverity,
   type AgentDefinition,
   type ReviewFinding,
@@ -23,6 +26,7 @@ describe("core metadata", () => {
     expect(REVIEW_SEVERITIES).toEqual(["low", "medium", "high", "critical"]);
     expect(REVIEW_CONFIDENCES).toEqual(["low", "medium", "high"]);
     expect(REVIEW_MODES).toEqual(["low-noise", "full", "security", "architecture", "testing"]);
+    expect(DEFAULT_REVIEW_MODE).toBe("low-noise");
     expect(AGENT_KINDS).toContain("backend");
     expect(AGENT_KINDS).toContain("security");
   });
@@ -32,6 +36,10 @@ describe("core metadata", () => {
     expect(isSeverity("cosmetic")).toBe(false);
     expect(isConfidence("medium")).toBe(true);
     expect(isConfidence("certain")).toBe(false);
+    expect(isReviewMode("low-noise")).toBe(true);
+    expect(isReviewMode("noisy")).toBe(false);
+    expect(isAgentKind("security")).toBe(true);
+    expect(isAgentKind("payments")).toBe(false);
   });
 
   test("supports typed review findings and reports", () => {

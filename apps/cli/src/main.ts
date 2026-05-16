@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { ASYNCS_DESCRIPTION, ASYNCS_PACKAGE_NAME } from "@asyncs/core";
+import { runPrReviewCommand } from "./prReviewCommand";
 
 const VERSION = "0.1.0";
 
@@ -11,6 +12,10 @@ export type CliResult = {
 };
 
 export function runCli(args: readonly string[]): CliResult {
+  if (args[0] === "pr" && args[1] === "review") {
+    return runPrReviewCommand(args.slice(2));
+  }
+
   if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
     return {
       exitCode: 0,
