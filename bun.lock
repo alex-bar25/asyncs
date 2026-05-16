@@ -23,12 +23,21 @@
         "@asyncs/core": "workspace:*",
       },
     },
+    "packages/agents": {
+      "name": "@asyncs/agents",
+      "version": "0.1.0",
+      "dependencies": {
+        "@asyncs/core": "workspace:*",
+      },
+    },
     "packages/core": {
       "name": "@asyncs/core",
       "version": "0.1.0",
     },
   },
   "packages": {
+    "@asyncs/agents": ["@asyncs/agents@workspace:packages/agents"],
+
     "@asyncs/core": ["@asyncs/core@workspace:packages/core"],
 
     "@eslint-community/eslint-utils": ["@eslint-community/eslint-utils@4.9.1", "", { "dependencies": { "eslint-visitor-keys": "^3.4.3" }, "peerDependencies": { "eslint": "^6.0.0 || ^7.0.0 || >=8.0.0" } }, "sha512-phrYmNiYppR7znFEdqgfWHXR6NCkZEK7hwWDHZUjit/2/U0r6XvkDl0SYnoM51Hq7FhCGdLDT6zxCCOY1hexsQ=="],
