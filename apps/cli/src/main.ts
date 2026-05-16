@@ -1,18 +1,12 @@
 #!/usr/bin/env bun
 
 import { ASYNCS_DESCRIPTION, ASYNCS_PACKAGE_NAME } from "@asyncs/core";
+import { CLI_VERSION, PR_REVIEW_COMMAND } from "./constants";
 import { runPrReviewCommand } from "./prReviewCommand";
-
-const VERSION = "0.1.0";
-
-export type CliResult = {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-};
+import type { CliResult } from "./types";
 
 export function runCli(args: readonly string[]): CliResult {
-  if (args[0] === "pr" && args[1] === "review") {
+  if (args[0] === PR_REVIEW_COMMAND[0] && args[1] === PR_REVIEW_COMMAND[1]) {
     return runPrReviewCommand(args.slice(2));
   }
 
@@ -27,7 +21,7 @@ export function runCli(args: readonly string[]): CliResult {
   if (args.length === 1 && (args[0] === "--version" || args[0] === "-v")) {
     return {
       exitCode: 0,
-      stdout: `${VERSION}\n`,
+      stdout: `${CLI_VERSION}\n`,
       stderr: "",
     };
   }

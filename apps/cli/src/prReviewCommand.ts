@@ -1,23 +1,8 @@
-import { DEFAULT_REVIEW_MODE, isAgentKind, isReviewMode, type AgentKind, type ReviewMode } from "@asyncs/core";
+import { isAgentKind, isReviewMode, type AgentKind } from "@asyncs/core";
+import { AUTO_AGENT_SELECTION_LABEL, DEFAULT_PR_REVIEW_OPTIONS, PR_REVIEW_OPTIONS } from "./constants";
+import type { CliResult, ParseResult, PrReviewOptions } from "./types";
 
-type PrReviewOptions = {
-  prNumber: number;
-  mode: ReviewMode;
-  agents: AgentKind[];
-  postComments: boolean;
-};
-
-type ParseResult =
-  | {
-      ok: true;
-      options: PrReviewOptions;
-    }
-  | {
-      ok: false;
-      error: string;
-    };
-
-export function runPrReviewCommand(args: readonly string[]) {
+export function runPrReviewCommand(args: readonly string[]): CliResult {
   const parsed = parsePrReviewArgs(args);
 
   if (!parsed.ok) {
@@ -30,12 +15,12 @@ export function runPrReviewCommand(args: readonly string[]) {
 
   return {
     exitCode: 0,
-    stdout: renderPrReviewPreview(parsed.options),
+    stdout: renderPrReviewPreview(parsed.value),
     stderr: "",
   };
 }
 
-function parsePrReviewArgs(args: readonly string[]): ParseResult {
+function parsePrReviewArgs(args: readonly string[]): ParseResult<PrReviewOptions> {
   const [prNumberValue, ...optionArgs] = args;
   const prNumber = Number(prNumberValue);
 
@@ -48,24 +33,24 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult {
 
   const options: PrReviewOptions = {
     prNumber,
-    mode: DEFAULT_REVIEW_MODE,
-    agents: [],
-    postComments: false,
+    mode: DEFAULT_PR_REVIEW_OPTIONS.mode,
+    agents: [...DEFAULT_PR_REVIEW_OPTIONS.agents],
+    postComments: DEFAULT_PR_REVIEW_OPTIONS.postComments,
   };
 
   for (let index = 0; index < optionArgs.length; index += 1) {
     const option = optionArgs[index];
 
-    if (option === "--post-comments") {
+    if (option === PR_REVIEW_OPTIONS.postComments) {
       options.postComments = true;
       continue;
     }
 
-    if (option === "--mode") {
+    if (option === PR_REVIEW_OPTIONS.mode) {
       const mode = optionArgs[index + 1];
 
       if (mode === undefined) {
-        return { ok: false, error: "Missing value for --mode." };
+        return { ok: false, error: `Missing value for ${PR_REVIEW_OPTIONS.mode}.` };
       }
 
       if (!isReviewMode(mode)) {
@@ -77,11 +62,11 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult {
       continue;
     }
 
-    if (option === "--agents") {
+    if (option === PR_REVIEW_OPTIONS.agents) {
       const agentsValue = optionArgs[index + 1];
 
       if (agentsValue === undefined) {
-        return { ok: false, error: "Missing value for --agents." };
+        return { ok: false, error: `Missing value for ${PR_REVIEW_OPTIONS.agents}.` };
       }
 
       const agents: AgentKind[] = [];
@@ -102,11 +87,11 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult {
     return { ok: false, error: `Unknown option: ${option ?? ""}` };
   }
 
-  return { ok: true, options };
+  return { ok: true, value: options };
 }
 
 function renderPrReviewPreview(options: PrReviewOptions): string {
-  const agents = options.agents.length > 0 ? options.agents.join(",") : "auto";
+  const agents = options.agents.length > 0 ? options.agents.join(",") : AUTO_AGENT_SELECTION_LABEL;
 
   return `Review request
 PR: ${options.prNumber}
