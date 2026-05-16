@@ -31,6 +31,13 @@
         "@asyncs/core": "workspace:*",
       },
     },
+    "packages/classifier": {
+      "name": "@asyncs/classifier",
+      "version": "0.1.0",
+      "dependencies": {
+        "@asyncs/core": "workspace:*",
+      },
+    },
     "packages/core": {
       "name": "@asyncs/core",
       "version": "0.1.0",
@@ -46,6 +53,8 @@
   },
   "packages": {
     "@asyncs/agents": ["@asyncs/agents@workspace:packages/agents"],
+
+    "@asyncs/classifier": ["@asyncs/classifier@workspace:packages/classifier"],
 
     "@asyncs/core": ["@asyncs/core@workspace:packages/core"],
 
