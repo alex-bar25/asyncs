@@ -225,7 +225,9 @@ Interactive CLI / GitHub Action / GitHub App
                     ↓
             Repository Analyzer
                     ↓
-              PR Classifier
+        Deterministic Preclassifier
+                    ↓
+             Classifier Agent
                     ↓
               Agent Router
                     ↓
@@ -418,16 +420,20 @@ Owns GitHub integration:
 
 ## packages/classifier
 
-Classifies PRs based on:
+`packages/classifier` should not try to hardcode every language, framework, or ecosystem.
+
+It owns the cheap deterministic preclassification layer: broad, low-cost signals that help the system understand a PR before any model call.
+
+The deterministic preclassifier may inspect:
 
 - file paths
-- extensions
-- frameworks
 - package manifests
-- changed code
 - dependency files
 - infra files
-- security-sensitive files
+- obvious test/docs/config/CI conventions
+- security-sensitive path names
+
+It should avoid becoming an exhaustive language database. Do not keep adding suffixes forever in an attempt to support every backend stack. Prefer generic path/manifest signals and repo/user-provided rules.
 
 Example classifications:
 
@@ -441,11 +447,57 @@ Example classifications:
 - config
 - CI/CD
 
+The preclassifier output is a hint, not the final routing authority.
+
+Final PR classification should be performed by a lightweight Classifier Agent when enough context is available.
+
+The Classifier Agent receives:
+
+- changed file paths
+- patch excerpts
+- repository manifests
+- deterministic preclassifier hints
+- user config and plugin rules
+
+It returns structured output such as:
+
+```ts
+type ClassificationResult = {
+  labels: string[];
+  suggestedAgents: AgentKind[];
+  confidence: "low" | "medium" | "high";
+  reasoning: string[];
+};
+```
+
+The Classifier Agent does not run the review swarm directly.
+
+Flow:
+
+```txt
+Deterministic Preclassifier
+        ↓
+Classifier Agent
+        ↓
+Agent Router
+        ↓
+Specialist Review Agents
+```
+
 ---
 
 ## packages/routing
 
 Chooses which agents should run.
+
+Routing priority:
+
+1. Explicit user-selected agents from CLI/config.
+2. Classifier Agent recommendations when available.
+3. Deterministic preclassifier hints as fallback.
+4. Safe mode defaults.
+
+The router should keep orchestration separate: it selects agents, but it does not run them.
 
 Example:
 
