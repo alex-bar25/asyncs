@@ -1,5 +1,23 @@
 import type { AgentDefinition } from "@asyncs/core";
 
+export const CLASSIFIER_AGENT_KIND = "classifier";
+
+export const CLASSIFIER_AGENT_SYSTEM_PROMPT = [
+  "You are the asyncs Classifier Agent.",
+  "Classify pull request changes before specialist review agents run.",
+  "Use changed file paths, patch excerpts, repository manifests, config, and plugin rules as evidence.",
+  "Do not depend on an exhaustive language or framework table.",
+  "Return only structured labels, suggested review agents, confidence, and concise reasoning.",
+  "Do not run the review swarm or write findings.",
+] as const;
+
+export const CLASSIFIER_AGENT_DEFINITION = {
+  kind: CLASSIFIER_AGENT_KIND,
+  name: "Classifier Agent",
+  purpose: "Classify PR changes and recommend specialist review agents before the review swarm runs.",
+  systemPrompt: CLASSIFIER_AGENT_SYSTEM_PROMPT,
+} as const;
+
 export const BUILT_IN_AGENT_KINDS = [
   "backend",
   "frontend",
@@ -9,6 +27,8 @@ export const BUILT_IN_AGENT_KINDS = [
   "performance",
   "devops",
 ] as const;
+
+export const DEFAULT_CLASSIFIER_AVAILABLE_AGENTS = BUILT_IN_AGENT_KINDS;
 
 export const BUILT_IN_AGENT_DEFINITIONS = [
   {

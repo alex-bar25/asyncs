@@ -358,7 +358,6 @@ asyncs/
 │   ├── agents/
 │   ├── orchestration/
 │   ├── routing/
-│   ├── classifier/
 │   ├── consensus/
 │   ├── providers/
 │   ├── plugins/
@@ -418,45 +417,17 @@ Owns GitHub integration:
 
 ---
 
-## packages/classifier
+## Classifier Agent
 
-`packages/classifier` should not try to hardcode every language, framework, or ecosystem.
+Classification is agent-driven, not a hardcoded language database.
 
-It owns the cheap deterministic preclassification layer: broad, low-cost signals that help the system understand a PR before any model call.
-
-The deterministic preclassifier may inspect:
-
-- file paths
-- package manifests
-- dependency files
-- infra files
-- obvious test/docs/config/CI conventions
-- security-sensitive path names
-
-It should avoid becoming an exhaustive language database. Do not keep adding suffixes forever in an attempt to support every backend stack. Prefer generic path/manifest signals and repo/user-provided rules.
-
-Example classifications:
-
-- backend
-- frontend
-- infra
-- security
-- database
-- tests
-- docs
-- config
-- CI/CD
-
-The preclassifier output is a hint, not the final routing authority.
-
-Final PR classification should be performed by a lightweight Classifier Agent when enough context is available.
+The Classifier Agent performs the first model-assisted pass over a PR before specialist review agents run.
 
 The Classifier Agent receives:
 
 - changed file paths
 - patch excerpts
 - repository manifests
-- deterministic preclassifier hints
 - user config and plugin rules
 
 It returns structured output such as:
@@ -472,11 +443,11 @@ type ClassificationResult = {
 
 The Classifier Agent does not run the review swarm directly.
 
+Avoid adding a deterministic classifier package that tries to enumerate every language, framework, file extension, or backend ecosystem. Repo-specific knowledge should come from manifests, config, plugins, and the classifier model context.
+
 Flow:
 
 ```txt
-Deterministic Preclassifier
-        ↓
 Classifier Agent
         ↓
 Agent Router
@@ -494,8 +465,7 @@ Routing priority:
 
 1. Explicit user-selected agents from CLI/config.
 2. Classifier Agent recommendations when available.
-3. Deterministic preclassifier hints as fallback.
-4. Safe mode defaults.
+3. Safe mode defaults.
 
 The router should keep orchestration separate: it selects agents, but it does not run them.
 
