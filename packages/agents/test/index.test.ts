@@ -3,6 +3,7 @@ import {
   BUILT_IN_AGENT_DEFINITIONS,
   BUILT_IN_AGENT_KINDS,
   getBuiltInAgentDefinition,
+  isBuiltInAgentKind,
   listBuiltInAgentDefinitions,
 } from "../src/index";
 
@@ -29,6 +30,11 @@ describe("built-in agent definitions", () => {
 
     expect(securityAgent?.name).toBe("Security Agent");
     expect(securityAgent?.purpose).toContain("auth");
+  });
+
+  test("checks whether an agent kind is built in", () => {
+    expect(isBuiltInAgentKind("backend")).toBe(true);
+    expect(isBuiltInAgentKind("custom")).toBe(false);
   });
 
   test("returns a copy of the built-in definitions", () => {
