@@ -35,6 +35,15 @@
       "name": "@asyncs/core",
       "version": "0.1.0",
     },
+    "packages/orchestration": {
+      "name": "@asyncs/orchestration",
+      "version": "0.1.0",
+      "dependencies": {
+        "@asyncs/agents": "workspace:*",
+        "@asyncs/core": "workspace:*",
+        "@asyncs/routing": "workspace:*",
+      },
+    },
     "packages/routing": {
       "name": "@asyncs/routing",
       "version": "0.1.0",
@@ -48,6 +57,8 @@
     "@asyncs/agents": ["@asyncs/agents@workspace:packages/agents"],
 
     "@asyncs/core": ["@asyncs/core@workspace:packages/core"],
+
+    "@asyncs/orchestration": ["@asyncs/orchestration@workspace:packages/orchestration"],
 
     "@asyncs/routing": ["@asyncs/routing@workspace:packages/routing"],
 
