@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ReviewRequest } from "@asyncs/core";
-import { createReviewRunPlan, type ReviewRunPlan } from "../src/index";
+import type { ProviderGenerateObjectRequest } from "@asyncs/providers";
+import { createCoordinatedReviewRunPlan, createReviewRunPlan, type ReviewRunPlan } from "../src/index";
 
 const baseRequest: ReviewRequest = {
   prNumber: 3213,
@@ -95,5 +96,62 @@ describe("review run planning", () => {
     } satisfies ReviewRunPlan;
 
     expect(plan.routeSource).toBe("auto");
+  });
+
+  test("runs the coordinator agent before building a run plan", async () => {
+    let capturedModel = "";
+    let capturedMessageText = "";
+
+    const plan = await createCoordinatedReviewRunPlan({
+      request: baseRequest,
+      coordinatorInput: {
+        files: [
+          {
+            path: "services/payments/retry.ts",
+            status: "modified",
+            additions: 10,
+            deletions: 2,
+            patch: "@@ retryPayment",
+          },
+        ],
+        availableAgents: ["backend", "security"],
+        manifests: {},
+      },
+      coordinatorModel: "coordinator-test-model",
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+          capturedModel = request.model;
+          capturedMessageText = request.messages.map((message) => message.content).join("\n");
+
+          return {
+            object: {
+              labels: ["payments"],
+              assignments: [
+                {
+                  agent: "backend",
+                  purpose: "Review payment retry correctness.",
+                  files: ["services/payments/retry.ts"],
+                  focusAreas: ["retry behavior"],
+                  context: "Payment retry behavior changed.",
+                },
+              ],
+              confidence: "high",
+              reasoning: ["Coordinator selected backend review for retry behavior."],
+            } as TObject,
+          };
+        },
+      },
+    });
+
+    expect(capturedModel).toBe("coordinator-test-model");
+    expect(capturedMessageText).toContain("leader/planner for the asyncs review swarm");
+    expect(capturedMessageText).toContain("services/payments/retry.ts");
+    expect(plan.routeSource).toBe("coordinator");
+    expect(plan.agents.map((agent) => agent.kind)).toEqual(["backend"]);
+    expect(plan.coordinatorOutput?.labels).toEqual(["payments"]);
   });
 });

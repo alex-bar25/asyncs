@@ -1,7 +1,7 @@
-import { getBuiltInAgentDefinition, isBuiltInAgentKind } from "@asyncs/agents";
+import { getBuiltInAgentDefinition, isBuiltInAgentKind, runCoordinatorAgent } from "@asyncs/agents";
 import type { AgentAssignment } from "@asyncs/agents";
 import { resolveAgentRoute } from "@asyncs/routing";
-import type { CreateReviewRunPlanOptions, ReviewRunPlan } from "./types";
+import type { CreateCoordinatedReviewRunPlanOptions, CreateReviewRunPlanOptions, ReviewRunPlan } from "./types";
 
 export function createReviewRunPlan(options: CreateReviewRunPlanOptions): ReviewRunPlan {
   const route = resolveAgentRoute(options.request);
@@ -31,6 +31,21 @@ export function createReviewRunPlan(options: CreateReviewRunPlanOptions): Review
     agents: route.agents,
     ...(options.coordinatorOutput === undefined ? {} : { coordinatorOutput: options.coordinatorOutput }),
   };
+}
+
+export async function createCoordinatedReviewRunPlan(
+  options: CreateCoordinatedReviewRunPlanOptions,
+): Promise<ReviewRunPlan> {
+  const result = await runCoordinatorAgent({
+    input: options.coordinatorInput,
+    model: options.coordinatorModel,
+    provider: options.provider,
+  });
+
+  return createReviewRunPlan({
+    request: options.request,
+    coordinatorOutput: result.output,
+  });
 }
 
 function resolveCoordinatorAgents(assignments: readonly AgentAssignment[]): ReviewRunPlan["agents"] {

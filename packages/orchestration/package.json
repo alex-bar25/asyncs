@@ -9,6 +9,7 @@
   "dependencies": {
     "@asyncs/agents": "workspace:*",
     "@asyncs/core": "workspace:*",
+    "@asyncs/providers": "workspace:*",
     "@asyncs/routing": "workspace:*"
   }
 }
