@@ -44,6 +44,10 @@
         "@asyncs/routing": "workspace:*",
       },
     },
+    "packages/providers": {
+      "name": "@asyncs/providers",
+      "version": "0.1.0",
+    },
     "packages/routing": {
       "name": "@asyncs/routing",
       "version": "0.1.0",
@@ -59,6 +63,8 @@
     "@asyncs/core": ["@asyncs/core@workspace:packages/core"],
 
     "@asyncs/orchestration": ["@asyncs/orchestration@workspace:packages/orchestration"],
+
+    "@asyncs/providers": ["@asyncs/providers@workspace:packages/providers"],
 
     "@asyncs/routing": ["@asyncs/routing@workspace:packages/routing"],
 
