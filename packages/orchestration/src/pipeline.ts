@@ -4,9 +4,9 @@ import { resolveAgentRoute } from "@asyncs/routing";
 import type { CreateReviewRunPlanOptions, ReviewRunPlan } from "./types";
 
 export function createReviewRunPlan(options: CreateReviewRunPlanOptions): ReviewRunPlan {
-  if (options.request.agents.length > 0) {
-    const route = resolveAgentRoute(options.request);
+  const route = resolveAgentRoute(options.request);
 
+  if (options.request.agents.length > 0) {
     return {
       request: options.request,
       routeSource: route.source,
@@ -16,7 +16,6 @@ export function createReviewRunPlan(options: CreateReviewRunPlanOptions): Review
   }
 
   const coordinatorAgents = resolveCoordinatorAgents(options.coordinatorOutput?.assignments ?? []);
-
   if (coordinatorAgents.length > 0) {
     return {
       request: options.request,
@@ -25,8 +24,6 @@ export function createReviewRunPlan(options: CreateReviewRunPlanOptions): Review
       ...(options.coordinatorOutput === undefined ? {} : { coordinatorOutput: options.coordinatorOutput }),
     };
   }
-
-  const route = resolveAgentRoute(options.request);
 
   return {
     request: options.request,
