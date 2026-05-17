@@ -1,14 +1,17 @@
 import { describe, expect, test } from "bun:test";
+import type { ProviderGenerateObjectRequest } from "@asyncs/providers";
 import {
   BUILT_IN_AGENT_DEFINITIONS,
   BUILT_IN_AGENT_KINDS,
   COORDINATOR_AGENT_KIND,
+  COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME,
   buildCoordinatorAgentInput,
   buildCoordinatorAgentMessages,
   getBuiltInAgentDefinition,
   getCoordinatorAgentDefinition,
   isBuiltInAgentKind,
   listBuiltInAgentDefinitions,
+  runCoordinatorAgent,
   type CoordinatorAgentOutput,
 } from "../src/index";
 
@@ -160,5 +163,87 @@ describe("coordinator agent contract", () => {
     expect(userMessage).toContain("services/payments/retry.ts");
     expect(userMessage).toContain("chargeWithRetry");
     expect(userMessage).toContain(".github/workflows/review.yml");
+  });
+
+  test("runs the coordinator agent through a structured provider", async () => {
+    const input = buildCoordinatorAgentInput({
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 24,
+          deletions: 6,
+        },
+      ],
+    });
+    const output: CoordinatorAgentOutput = {
+      labels: ["payments"],
+      assignments: [
+        {
+          agent: "backend",
+          purpose: "Review retry correctness.",
+          files: ["services/payments/retry.ts"],
+          focusAreas: ["retry behavior"],
+          context: "Payment retry code changed.",
+        },
+      ],
+      confidence: "high",
+      reasoning: ["Payment retry behavior changed."],
+    };
+    let capturedModel = "";
+    let capturedSchemaName = "";
+    let capturedMessageText = "";
+
+    const result = await runCoordinatorAgent({
+      input,
+      model: "coordinator-test-model",
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+          capturedModel = request.model;
+          capturedSchemaName = request.schemaName;
+          capturedMessageText = request.messages.map((message) => message.content).join("\n");
+
+          return {
+            object: output as TObject,
+            rawText: '{"labels":["payments"]}',
+            usage: {
+              inputTokens: 10,
+              outputTokens: 20,
+            },
+          };
+        },
+      },
+    });
+
+    expect(capturedModel).toBe("coordinator-test-model");
+    expect(capturedSchemaName).toBe(COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME);
+    expect(capturedMessageText).toContain("leader/planner for the asyncs review swarm");
+    expect(capturedMessageText).toContain("services/payments/retry.ts");
+    expect(result.output).toBe(output);
+    expect(result.rawText).toBe('{"labels":["payments"]}');
+    expect(result.usage?.outputTokens).toBe(20);
+  });
+
+  test("fails clearly when the provider cannot generate structured output", async () => {
+    const input = buildCoordinatorAgentInput({
+      files: [],
+    });
+
+    await expect(
+      runCoordinatorAgent({
+        input,
+        model: "coordinator-test-model",
+        provider: {
+          kind: "custom",
+          async generateText() {
+            return { text: "plain text only" };
+          },
+        },
+      }),
+    ).rejects.toThrow("Coordinator Agent requires a provider with structured object generation.");
   });
 });

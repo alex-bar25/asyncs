@@ -2,6 +2,11 @@ import type { AgentDefinition } from "@asyncs/core";
 
 export const COORDINATOR_AGENT_KIND = "coordinator";
 
+export const COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME = "CoordinatorAgentOutput";
+
+export const COORDINATOR_AGENT_STRUCTURED_OUTPUT_ERROR =
+  "Coordinator Agent requires a provider with structured object generation.";
+
 export const COORDINATOR_AGENT_SYSTEM_PROMPT = [
   "You are the asyncs Coordinator Agent, the leader/planner for the asyncs review swarm.",
   "Your job is to understand the pull request and decide which specialist review agents should run. Prepare focused assignments for them.",
