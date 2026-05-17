@@ -1,18 +1,18 @@
 import type { AgentKind, ChangedFile, Confidence } from "@asyncs/core";
-import type { BUILT_IN_AGENT_KINDS, CLASSIFIER_AGENT_KIND } from "./constants";
+import type { BUILT_IN_AGENT_KINDS, COORDINATOR_AGENT_KIND } from "./constants";
 
 export type BuiltInAgentKind = (typeof BUILT_IN_AGENT_KINDS)[number];
 
-export type ClassifierAgentKind = typeof CLASSIFIER_AGENT_KIND;
+export type CoordinatorAgentKind = typeof COORDINATOR_AGENT_KIND;
 
-export type ClassifierAgentDefinition = {
-  kind: ClassifierAgentKind;
+export type CoordinatorAgentDefinition = {
+  kind: CoordinatorAgentKind;
   name: string;
   purpose: string;
   systemPrompt: readonly string[];
 };
 
-export type ClassifierAgentInput = {
+export type CoordinatorAgentInput = {
   files: readonly ChangedFile[];
   availableAgents: readonly AgentKind[];
   manifests: Readonly<Record<string, string>>;
@@ -20,7 +20,7 @@ export type ClassifierAgentInput = {
   configSummary?: string;
 };
 
-export type ClassifierAgentInputOptions = {
+export type CoordinatorAgentInputOptions = {
   files: readonly ChangedFile[];
   availableAgents?: readonly AgentKind[];
   manifests?: Readonly<Record<string, string>>;
@@ -28,9 +28,17 @@ export type ClassifierAgentInputOptions = {
   configSummary?: string;
 };
 
-export type ClassifierAgentOutput = {
+export type AgentAssignment = {
+  agent: AgentKind;
+  purpose: string;
+  files: readonly string[];
+  focusAreas: readonly string[];
+  context: string;
+};
+
+export type CoordinatorAgentOutput = {
   labels: readonly string[];
-  suggestedAgents: readonly AgentKind[];
+  assignments: readonly AgentAssignment[];
   confidence: Confidence;
   reasoning: readonly string[];
 };

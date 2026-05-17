@@ -1,21 +1,22 @@
 import type { AgentDefinition } from "@asyncs/core";
 
-export const CLASSIFIER_AGENT_KIND = "classifier";
+export const COORDINATOR_AGENT_KIND = "coordinator";
 
-export const CLASSIFIER_AGENT_SYSTEM_PROMPT = [
-  "You are the asyncs Classifier Agent.",
-  "Classify pull request changes before specialist review agents run.",
-  "Use changed file paths, patch excerpts, repository manifests, config, and plugin rules as evidence.",
+export const COORDINATOR_AGENT_SYSTEM_PROMPT = [
+  "You are the asyncs Coordinator Agent.",
+  "Inspect pull request changes before specialist review agents run.",
+  "Use changed file paths, patch excerpts, repository manifests, config, plugin rules, and available review agents as evidence.",
   "Do not depend on an exhaustive language or framework table.",
-  "Return only structured labels, suggested review agents, confidence, and concise reasoning.",
+  "Prepare focused assignments for specialist review agents.",
+  "Return only structured labels, assignments, confidence, and concise reasoning.",
   "Do not run the review swarm or write findings.",
 ] as const;
 
-export const CLASSIFIER_AGENT_DEFINITION = {
-  kind: CLASSIFIER_AGENT_KIND,
-  name: "Classifier Agent",
-  purpose: "Classify PR changes and recommend specialist review agents before the review swarm runs.",
-  systemPrompt: CLASSIFIER_AGENT_SYSTEM_PROMPT,
+export const COORDINATOR_AGENT_DEFINITION = {
+  kind: COORDINATOR_AGENT_KIND,
+  name: "Coordinator Agent",
+  purpose: "Plan specialist review agent assignments before the review swarm runs.",
+  systemPrompt: COORDINATOR_AGENT_SYSTEM_PROMPT,
 } as const;
 
 export const BUILT_IN_AGENT_KINDS = [
@@ -28,7 +29,7 @@ export const BUILT_IN_AGENT_KINDS = [
   "devops",
 ] as const;
 
-export const DEFAULT_CLASSIFIER_AVAILABLE_AGENTS = BUILT_IN_AGENT_KINDS;
+export const DEFAULT_COORDINATOR_AVAILABLE_AGENTS = BUILT_IN_AGENT_KINDS;
 
 export const BUILT_IN_AGENT_DEFINITIONS = [
   {

@@ -2,14 +2,14 @@ import type { AgentDefinition } from "@asyncs/core";
 import {
   BUILT_IN_AGENT_DEFINITIONS,
   BUILT_IN_AGENT_KINDS,
-  CLASSIFIER_AGENT_DEFINITION,
-  DEFAULT_CLASSIFIER_AVAILABLE_AGENTS,
+  COORDINATOR_AGENT_DEFINITION,
+  DEFAULT_COORDINATOR_AVAILABLE_AGENTS,
 } from "./constants";
 import type {
   BuiltInAgentKind,
-  ClassifierAgentDefinition,
-  ClassifierAgentInput,
-  ClassifierAgentInputOptions,
+  CoordinatorAgentDefinition,
+  CoordinatorAgentInput,
+  CoordinatorAgentInputOptions,
 } from "./types";
 
 export function listBuiltInAgentDefinitions(): AgentDefinition[] {
@@ -24,14 +24,14 @@ export function isBuiltInAgentKind(kind: string): kind is BuiltInAgentKind {
   return BUILT_IN_AGENT_KINDS.includes(kind as BuiltInAgentKind);
 }
 
-export function getClassifierAgentDefinition(): ClassifierAgentDefinition {
-  return CLASSIFIER_AGENT_DEFINITION;
+export function getCoordinatorAgentDefinition(): CoordinatorAgentDefinition {
+  return COORDINATOR_AGENT_DEFINITION;
 }
 
-export function buildClassifierAgentInput(options: ClassifierAgentInputOptions): ClassifierAgentInput {
+export function buildCoordinatorAgentInput(options: CoordinatorAgentInputOptions): CoordinatorAgentInput {
   return {
     files: options.files,
-    availableAgents: options.availableAgents ?? DEFAULT_CLASSIFIER_AVAILABLE_AGENTS,
+    availableAgents: options.availableAgents ?? DEFAULT_COORDINATOR_AVAILABLE_AGENTS,
     manifests: options.manifests ?? {},
     ...(options.repository === undefined ? {} : { repository: options.repository }),
     ...(options.configSummary === undefined ? {} : { configSummary: options.configSummary }),

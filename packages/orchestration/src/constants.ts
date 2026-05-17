@@ -1,1 +1,1 @@
-export const REVIEW_RUN_ROUTE_SOURCES = ["explicit", "classifier", "auto"] as const;
+export const REVIEW_RUN_ROUTE_SOURCES = ["explicit", "coordinator", "auto"] as const;

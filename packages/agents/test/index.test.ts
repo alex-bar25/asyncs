@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import {
   BUILT_IN_AGENT_DEFINITIONS,
   BUILT_IN_AGENT_KINDS,
-  CLASSIFIER_AGENT_KIND,
-  buildClassifierAgentInput,
+  COORDINATOR_AGENT_KIND,
+  buildCoordinatorAgentInput,
   getBuiltInAgentDefinition,
-  getClassifierAgentDefinition,
+  getCoordinatorAgentDefinition,
   isBuiltInAgentKind,
   listBuiltInAgentDefinitions,
-  type ClassifierAgentOutput,
+  type CoordinatorAgentOutput,
 } from "../src/index";
 
 describe("built-in agent definitions", () => {
@@ -51,18 +51,18 @@ describe("built-in agent definitions", () => {
   });
 });
 
-describe("classifier agent contract", () => {
-  test("exports classifier agent metadata separately from review agents", () => {
-    const classifierAgent = getClassifierAgentDefinition();
+describe("coordinator agent contract", () => {
+  test("exports coordinator agent metadata separately from review agents", () => {
+    const coordinatorAgent = getCoordinatorAgentDefinition();
 
-    expect(CLASSIFIER_AGENT_KIND).toBe("classifier");
-    expect(classifierAgent.kind).toBe("classifier");
-    expect(classifierAgent.name).toBe("Classifier Agent");
-    expect(classifierAgent.systemPrompt.join("\n")).toContain("Do not depend on an exhaustive language");
-    expect(isBuiltInAgentKind(classifierAgent.kind)).toBe(false);
+    expect(COORDINATOR_AGENT_KIND).toBe("coordinator");
+    expect(coordinatorAgent.kind).toBe("coordinator");
+    expect(coordinatorAgent.name).toBe("Coordinator Agent");
+    expect(coordinatorAgent.systemPrompt.join("\n")).toContain("Prepare focused assignments");
+    expect(isBuiltInAgentKind(coordinatorAgent.kind)).toBe(false);
   });
 
-  test("builds classifier agent input without deterministic language rules", () => {
+  test("builds coordinator agent input without deterministic language rules", () => {
     const files = [
       {
         path: "services/payments/retry.flow",
@@ -73,7 +73,7 @@ describe("classifier agent contract", () => {
       },
     ] as const;
 
-    const input = buildClassifierAgentInput({
+    const input = buildCoordinatorAgentInput({
       files,
       repository: "alex/payments",
       manifests: {
@@ -87,15 +87,30 @@ describe("classifier agent contract", () => {
     expect(input.manifests["repo-map.txt"]).toContain("payments service");
   });
 
-  test("defines classifier agent output contract", () => {
+  test("defines coordinator agent output contract with focused assignments", () => {
     const output = {
       labels: ["payments", "retry-flow"],
-      suggestedAgents: ["backend", "security", "testing"],
+      assignments: [
+        {
+          agent: "backend",
+          purpose: "Review payment retry correctness and idempotency.",
+          files: ["services/payments/retry.flow"],
+          focusAreas: ["retry behavior", "idempotency"],
+          context: "Payment retry orchestration changed.",
+        },
+        {
+          agent: "security",
+          purpose: "Review unsafe repeated charge or authorization risks.",
+          files: ["services/payments/retry.flow"],
+          focusAreas: ["authorization", "duplicate charge risk"],
+          context: "Payment retry behavior can affect money movement safety.",
+        },
+      ],
       confidence: "high",
-      reasoning: ["Payment retry changes should be reviewed for correctness and safety."],
-    } satisfies ClassifierAgentOutput;
+      reasoning: ["Payment retry changes should be split between backend and security review."],
+    } satisfies CoordinatorAgentOutput;
 
-    expect(output.suggestedAgents).toContain("backend");
+    expect(output.assignments.map((assignment) => assignment.agent)).toEqual(["backend", "security"]);
     expect(output.confidence).toBe("high");
   });
 });

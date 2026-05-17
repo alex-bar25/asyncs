@@ -223,13 +223,11 @@ Interactive CLI / GitHub Action / GitHub App
                     ↓
               PR Loader
                     ↓
-            Repository Analyzer
+            Context Collector
                     ↓
-        Deterministic Preclassifier
+            Coordinator Agent
                     ↓
-             Classifier Agent
-                    ↓
-              Agent Router
+              Orchestrator
                     ↓
        Parallel Specialist Agents
                     ↓
@@ -417,40 +415,51 @@ Owns GitHub integration:
 
 ---
 
-## Classifier Agent
+## Coordinator Agent
 
-Classification is agent-driven, not a hardcoded language database.
+Swarm planning is agent-driven, not a hardcoded language database.
 
-The Classifier Agent performs the first model-assisted pass over a PR before specialist review agents run.
+The Coordinator Agent is the leader/planner for the review swarm.
 
-The Classifier Agent receives:
+The Coordinator Agent receives:
 
 - changed file paths
 - patch excerpts
 - repository manifests
+- available specialist agents
 - user config and plugin rules
 
 It returns structured output such as:
 
 ```ts
-type ClassificationResult = {
+type ReviewPlan = {
   labels: string[];
-  suggestedAgents: AgentKind[];
+  assignments: AgentAssignment[];
   confidence: "low" | "medium" | "high";
   reasoning: string[];
 };
+
+type AgentAssignment = {
+  agent: AgentKind;
+  purpose: string;
+  files: string[];
+  focusAreas: string[];
+  context: string;
+};
 ```
 
-The Classifier Agent does not run the review swarm directly.
+The Coordinator Agent decides the swarm plan. The orchestrator executes the swarm plan.
 
-Avoid adding a deterministic classifier package that tries to enumerate every language, framework, file extension, or backend ecosystem. Repo-specific knowledge should come from manifests, config, plugins, and the classifier model context.
+Avoid adding a deterministic language-heuristics package that tries to enumerate every language, framework, file extension, or backend ecosystem. Repo-specific knowledge should come from manifests, config, plugins, and the coordinator model context.
 
 Flow:
 
 ```txt
-Classifier Agent
+Context Collector
         ↓
-Agent Router
+Coordinator Agent
+        ↓
+Orchestrator
         ↓
 Specialist Review Agents
 ```
@@ -464,10 +473,10 @@ Chooses which agents should run.
 Routing priority:
 
 1. Explicit user-selected agents from CLI/config.
-2. Classifier Agent recommendations when available.
+2. Coordinator Agent assignments when available.
 3. Safe mode defaults.
 
-The router should keep orchestration separate: it selects agents, but it does not run them.
+The router maps selected agent kinds to known agent definitions. The orchestrator owns runtime concerns such as execution, cancellation, retries, and result collection.
 
 Example:
 
@@ -507,10 +516,12 @@ Agents should have:
 
 ## packages/orchestration
 
-Runs selected agents.
+Plans and runs the review swarm.
 
 Responsibilities:
 
+- consume Coordinator Agent assignments
+- build the review run plan
 - parallel execution
 - timeouts
 - cancellation
@@ -544,7 +555,7 @@ Plugin types:
 
 - custom rules
 - custom agents
-- custom classifiers
+- custom coordinator context
 - custom review modes
 - custom formatters
 

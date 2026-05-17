@@ -11,17 +11,25 @@ const baseRequest: ReviewRequest = {
 };
 
 describe("review run planning", () => {
-  test("uses explicit request agents before classifier recommendations", () => {
+  test("uses explicit request agents before coordinator assignments", () => {
     const plan = createReviewRunPlan({
       request: {
         ...baseRequest,
         agents: ["security"],
       },
-      classifierOutput: {
+      coordinatorOutput: {
         labels: ["backend-change"],
-        suggestedAgents: ["backend", "testing"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review backend behavior.",
+            files: ["services/payments/retry.flow"],
+            focusAreas: ["retry behavior"],
+            context: "The coordinator sees backend behavior changes.",
+          },
+        ],
         confidence: "high",
-        reasoning: ["The classifier sees backend behavior changes."],
+        reasoning: ["The coordinator sees backend behavior changes."],
       },
     });
 
@@ -29,23 +37,45 @@ describe("review run planning", () => {
     expect(plan.agents.map((agent) => agent.kind)).toEqual(["security"]);
   });
 
-  test("uses classifier recommendations when no agents are explicit", () => {
+  test("uses coordinator assignments when no agents are explicit", () => {
     const plan = createReviewRunPlan({
       request: baseRequest,
-      classifierOutput: {
+      coordinatorOutput: {
         labels: ["payments", "retry-flow"],
-        suggestedAgents: ["backend", "security", "testing"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review payment retry correctness.",
+            files: ["services/payments/retry.flow"],
+            focusAreas: ["retry behavior", "idempotency"],
+            context: "Payment retry orchestration changed.",
+          },
+          {
+            agent: "security",
+            purpose: "Review money movement safety.",
+            files: ["services/payments/retry.flow"],
+            focusAreas: ["authorization", "duplicate charge risk"],
+            context: "Payment retries can create repeated charge risk.",
+          },
+          {
+            agent: "testing",
+            purpose: "Review coverage for retry edge cases.",
+            files: ["services/payments/retry.flow"],
+            focusAreas: ["failure paths", "duplicate event handling"],
+            context: "Retry behavior changed and needs regression coverage.",
+          },
+        ],
         confidence: "high",
         reasoning: ["Payment retry changes need correctness, safety, and coverage review."],
       },
     });
 
-    expect(plan.routeSource).toBe("classifier");
+    expect(plan.routeSource).toBe("coordinator");
     expect(plan.agents.map((agent) => agent.kind)).toEqual(["backend", "security", "testing"]);
-    expect(plan.classifierOutput?.confidence).toBe("high");
+    expect(plan.coordinatorOutput?.confidence).toBe("high");
   });
 
-  test("falls back to mode defaults without classifier recommendations", () => {
+  test("falls back to mode defaults without coordinator assignments", () => {
     const plan = createReviewRunPlan({
       request: {
         ...baseRequest,

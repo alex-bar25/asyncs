@@ -1,5 +1,5 @@
 import { getBuiltInAgentDefinition, isBuiltInAgentKind } from "@asyncs/agents";
-import type { AgentKind } from "@asyncs/core";
+import type { AgentAssignment } from "@asyncs/agents";
 import { resolveAgentRoute } from "@asyncs/routing";
 import type { CreateReviewRunPlanOptions, ReviewRunPlan } from "./types";
 
@@ -11,18 +11,18 @@ export function createReviewRunPlan(options: CreateReviewRunPlanOptions): Review
       request: options.request,
       routeSource: route.source,
       agents: route.agents,
-      ...(options.classifierOutput === undefined ? {} : { classifierOutput: options.classifierOutput }),
+      ...(options.coordinatorOutput === undefined ? {} : { coordinatorOutput: options.coordinatorOutput }),
     };
   }
 
-  const classifierAgents = resolveClassifierAgents(options.classifierOutput?.suggestedAgents ?? []);
+  const coordinatorAgents = resolveCoordinatorAgents(options.coordinatorOutput?.assignments ?? []);
 
-  if (classifierAgents.length > 0) {
+  if (coordinatorAgents.length > 0) {
     return {
       request: options.request,
-      routeSource: "classifier",
-      agents: classifierAgents,
-      ...(options.classifierOutput === undefined ? {} : { classifierOutput: options.classifierOutput }),
+      routeSource: "coordinator",
+      agents: coordinatorAgents,
+      ...(options.coordinatorOutput === undefined ? {} : { coordinatorOutput: options.coordinatorOutput }),
     };
   }
 
@@ -32,15 +32,15 @@ export function createReviewRunPlan(options: CreateReviewRunPlanOptions): Review
     request: options.request,
     routeSource: route.source,
     agents: route.agents,
-    ...(options.classifierOutput === undefined ? {} : { classifierOutput: options.classifierOutput }),
+    ...(options.coordinatorOutput === undefined ? {} : { coordinatorOutput: options.coordinatorOutput }),
   };
 }
 
-function resolveClassifierAgents(agentKinds: readonly AgentKind[]): ReviewRunPlan["agents"] {
-  const uniqueAgentKinds = new Set<AgentKind>();
+function resolveCoordinatorAgents(assignments: readonly AgentAssignment[]): ReviewRunPlan["agents"] {
+  const uniqueAgentKinds = new Set<AgentAssignment["agent"]>();
 
-  for (const agentKind of agentKinds) {
-    uniqueAgentKinds.add(agentKind);
+  for (const assignment of assignments) {
+    uniqueAgentKinds.add(assignment.agent);
   }
 
   return [...uniqueAgentKinds].flatMap((agentKind) => {
