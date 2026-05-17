@@ -4,6 +4,7 @@ import {
   BUILT_IN_AGENT_KINDS,
   COORDINATOR_AGENT_KIND,
   buildCoordinatorAgentInput,
+  buildCoordinatorAgentMessages,
   getBuiltInAgentDefinition,
   getCoordinatorAgentDefinition,
   isBuiltInAgentKind,
@@ -112,5 +113,52 @@ describe("coordinator agent contract", () => {
 
     expect(output.assignments.map((assignment) => assignment.agent)).toEqual(["backend", "security"]);
     expect(output.confidence).toBe("high");
+  });
+
+  test("builds a rich coordinator prompt from review context", () => {
+    const input = buildCoordinatorAgentInput({
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 24,
+          deletions: 6,
+          patch: "@@ retryPayment\n+ await chargeWithRetry(orderId)",
+        },
+        {
+          path: ".github/workflows/review.yml",
+          status: "added",
+          additions: 18,
+          deletions: 0,
+        },
+      ],
+      repository: "alex/payments",
+      configSummary: "low-noise mode; prefer high-confidence production-impacting findings",
+      manifests: {
+        "package.json": '{ "dependencies": { "stripe": "^18.0.0" } }',
+      },
+    });
+
+    const messages = buildCoordinatorAgentMessages(input);
+    const systemMessage = messages[0]?.content ?? "";
+    const userMessage = messages[1]?.content ?? "";
+
+    expect(messages.map((message) => message.role)).toEqual(["system", "user"]);
+    expect(systemMessage).toContain("leader/planner for the asyncs review swarm");
+    expect(systemMessage).toContain("Do not write review findings");
+    expect(systemMessage).toContain("assignments");
+    expect(systemMessage).toContain("purpose");
+    expect(systemMessage).toContain("focusAreas");
+    expect(systemMessage).toContain("context");
+    expect(systemMessage).toContain("Only assign an agent when its domain is materially relevant");
+    expect(userMessage).toContain("Repository: alex/payments");
+    expect(userMessage).toContain("Available specialist agents");
+    expect(userMessage).toContain("Backend Agent");
+    expect(userMessage).toContain("Security Agent");
+    expect(userMessage).toContain("low-noise mode");
+    expect(userMessage).toContain("package.json");
+    expect(userMessage).toContain("services/payments/retry.ts");
+    expect(userMessage).toContain("chargeWithRetry");
+    expect(userMessage).toContain(".github/workflows/review.yml");
   });
 });

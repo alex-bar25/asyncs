@@ -29,6 +29,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@asyncs/core": "workspace:*",
+        "@asyncs/providers": "workspace:*",
       },
     },
     "packages/core": {
