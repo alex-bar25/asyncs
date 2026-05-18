@@ -4,8 +4,10 @@ import {
   COORDINATOR_AGENT_DECISION_RULES,
   COORDINATOR_AGENT_OUTPUT_CONTRACT,
   COORDINATOR_AGENT_SYSTEM_PROMPT,
+  SPECIALIST_AGENT_OUTPUT_CONTRACT,
+  SPECIALIST_AGENT_SYSTEM_RULES,
 } from "./constants";
-import type { CoordinatorAgentInput } from "./types";
+import type { CoordinatorAgentInput, SpecialistAgentInput } from "./types";
 
 export function buildCoordinatorAgentMessages(input: CoordinatorAgentInput): ProviderMessage[] {
   return [
@@ -74,7 +76,7 @@ function formatManifests(manifests: CoordinatorAgentInput["manifests"]): string 
   return entries.map(([path, content]) => [`### ${path}`, fenced(content)].join("\n")).join("\n\n");
 }
 
-function formatChangedFiles(input: CoordinatorAgentInput): string {
+function formatChangedFiles(input: Pick<CoordinatorAgentInput, "files">): string {
   if (input.files.length === 0) {
     return "No changed files provided.";
   }
@@ -95,4 +97,46 @@ function formatChangedFiles(input: CoordinatorAgentInput): string {
 
 function fenced(content: string): string {
   return ["```", content, "```"].join("\n");
+}
+
+export function buildSpecialistAgentMessages(input: SpecialistAgentInput): ProviderMessage[] {
+  return [
+    {
+      role: "system",
+      content: buildSpecialistSystemPrompt(input),
+    },
+    {
+      role: "user",
+      content: buildSpecialistUserPrompt(input),
+    },
+  ];
+}
+
+function buildSpecialistSystemPrompt(input: SpecialistAgentInput): string {
+  return [
+    `You are the ${input.agent.name}.`,
+    input.agent.purpose,
+    "",
+    "Review rules:",
+    ...SPECIALIST_AGENT_SYSTEM_RULES.map((rule) => `- ${rule}`),
+    "",
+    "Output contract:",
+    ...SPECIALIST_AGENT_OUTPUT_CONTRACT,
+  ].join("\n");
+}
+
+function buildSpecialistUserPrompt(input: SpecialistAgentInput): string {
+  return [
+    `Repository: ${input.repository ?? "unknown"}`,
+    `Review mode: ${input.mode ?? "low-noise"}`,
+    "",
+    "Coordinator assignment:",
+    `Purpose: ${input.assignment.purpose}`,
+    `Context: ${input.assignment.context}`,
+    `Focus areas: ${input.assignment.focusAreas.join(", ") || "none"}`,
+    `Assigned files: ${input.assignment.files.join(", ") || "none"}`,
+    "",
+    "Changed files and patch excerpts:",
+    formatChangedFiles(input),
+  ].join("\n");
 }

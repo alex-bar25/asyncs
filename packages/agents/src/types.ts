@@ -1,4 +1,4 @@
-import type { AgentKind, ChangedFile, Confidence } from "@asyncs/core";
+import type { AgentDefinition, AgentKind, ChangedFile, Confidence, ReviewFinding, ReviewMode } from "@asyncs/core";
 import type { ProviderClient, ProviderUsage } from "@asyncs/providers";
 import type { BUILT_IN_AGENT_KINDS, COORDINATOR_AGENT_KIND } from "./constants";
 
@@ -52,6 +52,30 @@ export type RunCoordinatorAgentOptions = {
 
 export type CoordinatorAgentRunResult = {
   output: CoordinatorAgentOutput;
+  usage?: ProviderUsage;
+  rawText?: string;
+};
+
+export type SpecialistAgentInput = {
+  agent: AgentDefinition;
+  assignment: AgentAssignment;
+  files: readonly ChangedFile[];
+  repository?: string;
+  mode?: ReviewMode;
+};
+
+export type SpecialistAgentOutput = {
+  findings: readonly ReviewFinding[];
+  summary: string;
+};
+
+export type RunSpecialistAgentOptions = SpecialistAgentInput & {
+  model: string;
+  provider: ProviderClient;
+};
+
+export type SpecialistAgentRunResult = {
+  output: SpecialistAgentOutput;
   usage?: ProviderUsage;
   rawText?: string;
 };

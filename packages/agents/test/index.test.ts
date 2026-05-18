@@ -5,14 +5,18 @@ import {
   BUILT_IN_AGENT_KINDS,
   COORDINATOR_AGENT_KIND,
   COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME,
+  SPECIALIST_AGENT_OUTPUT_SCHEMA_NAME,
   buildCoordinatorAgentInput,
   buildCoordinatorAgentMessages,
+  buildSpecialistAgentMessages,
   getBuiltInAgentDefinition,
   getCoordinatorAgentDefinition,
   isBuiltInAgentKind,
   listBuiltInAgentDefinitions,
   runCoordinatorAgent,
+  runSpecialistAgent,
   type CoordinatorAgentOutput,
+  type SpecialistAgentOutput,
 } from "../src/index";
 
 describe("built-in agent definitions", () => {
@@ -245,5 +249,156 @@ describe("coordinator agent contract", () => {
         },
       }),
     ).rejects.toThrow("Coordinator Agent requires a provider with structured object generation.");
+  });
+});
+
+describe("specialist agent contract", () => {
+  test("builds a focused specialist prompt from an assignment", () => {
+    const backendAgent = getBuiltInAgentDefinition("backend");
+
+    if (backendAgent === undefined) {
+      throw new Error("Expected backend agent definition.");
+    }
+
+    const messages = buildSpecialistAgentMessages({
+      agent: backendAgent,
+      assignment: {
+        agent: "backend",
+        purpose: "Review payment retry correctness and idempotency.",
+        files: ["services/payments/retry.ts"],
+        focusAreas: ["retry behavior", "idempotency", "failure paths"],
+        context: "Payment retry behavior changed and may affect duplicate charge safety.",
+      },
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 24,
+          deletions: 6,
+          patch: "@@ retryPayment\n+ await chargeWithRetry(orderId)",
+        },
+      ],
+      repository: "alex/payments",
+      mode: "low-noise",
+    });
+    const systemMessage = messages[0]?.content ?? "";
+    const userMessage = messages[1]?.content ?? "";
+
+    expect(messages.map((message) => message.role)).toEqual(["system", "user"]);
+    expect(systemMessage).toContain("You are the Backend Agent");
+    expect(systemMessage).toContain("Stay inside your specialist domain");
+    expect(systemMessage).toContain("Every finding must cite concrete evidence");
+    expect(systemMessage).toContain("Suppress vague, preference-only, or low-confidence comments");
+    expect(systemMessage).toContain("SpecialistAgentOutput");
+    expect(userMessage).toContain("Repository: alex/payments");
+    expect(userMessage).toContain("Review mode: low-noise");
+    expect(userMessage).toContain("Review payment retry correctness and idempotency");
+    expect(userMessage).toContain("retry behavior");
+    expect(userMessage).toContain("services/payments/retry.ts");
+    expect(userMessage).toContain("chargeWithRetry");
+  });
+
+  test("runs a specialist agent through a structured provider", async () => {
+    const securityAgent = getBuiltInAgentDefinition("security");
+
+    if (securityAgent === undefined) {
+      throw new Error("Expected security agent definition.");
+    }
+
+    const output: SpecialistAgentOutput = {
+      findings: [
+        {
+          agent: "security",
+          title: "Missing authorization check",
+          message: "The changed retry path should preserve authorization checks.",
+          severity: "high",
+          confidence: "medium",
+          file: "services/payments/retry.ts",
+          line: 42,
+          evidence: "The patch calls chargeWithRetry without showing an authorization guard.",
+          recommendation: "Confirm the caller is authorized before retrying the charge.",
+        },
+      ],
+      summary: "Security reviewed the payment retry assignment.",
+    };
+    let capturedModel = "";
+    let capturedSchemaName = "";
+    let capturedMessageText = "";
+
+    const result = await runSpecialistAgent({
+      agent: securityAgent,
+      assignment: {
+        agent: "security",
+        purpose: "Review money movement safety.",
+        files: ["services/payments/retry.ts"],
+        focusAreas: ["authorization", "duplicate charge risk"],
+        context: "Payment retry behavior changed.",
+      },
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 24,
+          deletions: 6,
+          patch: "@@ retryPayment\n+ await chargeWithRetry(orderId)",
+        },
+      ],
+      model: "specialist-test-model",
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+          capturedModel = request.model;
+          capturedSchemaName = request.schemaName;
+          capturedMessageText = request.messages.map((message) => message.content).join("\n");
+
+          return {
+            object: output as TObject,
+            usage: {
+              inputTokens: 11,
+              outputTokens: 22,
+            },
+          };
+        },
+      },
+    });
+
+    expect(capturedModel).toBe("specialist-test-model");
+    expect(capturedSchemaName).toBe(SPECIALIST_AGENT_OUTPUT_SCHEMA_NAME);
+    expect(capturedMessageText).toContain("Security Agent");
+    expect(capturedMessageText).toContain("duplicate charge risk");
+    expect(result.output).toBe(output);
+    expect(result.usage?.outputTokens).toBe(22);
+  });
+
+  test("fails clearly when a specialist provider cannot generate structured output", async () => {
+    const testingAgent = getBuiltInAgentDefinition("testing");
+
+    if (testingAgent === undefined) {
+      throw new Error("Expected testing agent definition.");
+    }
+
+    await expect(
+      runSpecialistAgent({
+        agent: testingAgent,
+        assignment: {
+          agent: "testing",
+          purpose: "Review coverage.",
+          files: [],
+          focusAreas: ["regression coverage"],
+          context: "No files provided.",
+        },
+        files: [],
+        model: "specialist-test-model",
+        provider: {
+          kind: "custom",
+          async generateText() {
+            return { text: "plain text only" };
+          },
+        },
+      }),
+    ).rejects.toThrow("Specialist Agent requires a provider with structured object generation.");
   });
 });

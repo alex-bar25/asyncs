@@ -7,6 +7,11 @@ export const COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME = "CoordinatorAgentOutput";
 export const COORDINATOR_AGENT_STRUCTURED_OUTPUT_ERROR =
   "Coordinator Agent requires a provider with structured object generation.";
 
+export const SPECIALIST_AGENT_OUTPUT_SCHEMA_NAME = "SpecialistAgentOutput";
+
+export const SPECIALIST_AGENT_STRUCTURED_OUTPUT_ERROR =
+  "Specialist Agent requires a provider with structured object generation.";
+
 export const COORDINATOR_AGENT_SYSTEM_PROMPT = [
   "You are the asyncs Coordinator Agent, the leader/planner for the asyncs review swarm.",
   "Your job is to understand the pull request and decide which specialist review agents should run. Prepare focused assignments for them.",
@@ -49,6 +54,26 @@ export const COORDINATOR_AGENT_DECISION_RULES = [
   "Assign frontend for UI behavior, accessibility, rendering, state, forms, or client integration changes.",
   "Assign backend for APIs, services, data flow, persistence, async behavior, transactions, retries, or integrations.",
   "If the PR is docs-only or otherwise low-risk, return no assignments and explain why.",
+] as const;
+
+export const SPECIALIST_AGENT_SYSTEM_RULES = [
+  "Stay inside your specialist domain and the coordinator assignment.",
+  "Review only the changed code and context you were given.",
+  "Every finding must cite concrete evidence from the changed files or supplied context.",
+  "Suppress vague, preference-only, or low-confidence comments; also avoid duplicate findings.",
+  "Prefer one strong finding over several weak findings.",
+  "Do not invent behavior from files or systems you cannot see.",
+  "Return no findings when the assignment has no meaningful issue.",
+] as const;
+
+export const SPECIALIST_AGENT_OUTPUT_CONTRACT = [
+  "Return a SpecialistAgentOutput object:",
+  "{",
+  '  "findings": ReviewFinding[],',
+  '  "summary": string',
+  "}",
+  "",
+  "Each ReviewFinding must include agent, title, message, severity, confidence, evidence, and recommendation.",
 ] as const;
 
 export const COORDINATOR_AGENT_DEFINITION = {
