@@ -1,7 +1,13 @@
-import { getBuiltInAgentDefinition, isBuiltInAgentKind, runCoordinatorAgent } from "@asyncs/agents";
+import { getBuiltInAgentDefinition, isBuiltInAgentKind, runCoordinatorAgent, runSpecialistAgent } from "@asyncs/agents";
 import type { AgentAssignment } from "@asyncs/agents";
 import { resolveAgentRoute } from "@asyncs/routing";
-import type { CreateCoordinatedReviewRunPlanOptions, CreateReviewRunPlanOptions, ReviewRunPlan } from "./types";
+import type {
+  CreateCoordinatedReviewRunPlanOptions,
+  CreateReviewRunPlanOptions,
+  ExecuteSpecialistAssignmentsOptions,
+  ReviewRunPlan,
+  SpecialistAssignmentExecutionResult,
+} from "./types";
 
 export function createReviewRunPlan(options: CreateReviewRunPlanOptions): ReviewRunPlan {
   const route = resolveAgentRoute(options.request);
@@ -46,6 +52,43 @@ export async function createCoordinatedReviewRunPlan(
     request: options.request,
     coordinatorOutput: result.output,
   });
+}
+
+export async function executeSpecialistAssignments(
+  options: ExecuteSpecialistAssignmentsOptions,
+): Promise<SpecialistAssignmentExecutionResult> {
+  const runs: SpecialistAssignmentExecutionResult["runs"] = [];
+
+  for (const assignment of options.plan.coordinatorOutput?.assignments ?? []) {
+    if (!isBuiltInAgentKind(assignment.agent)) {
+      continue;
+    }
+
+    const agent = getBuiltInAgentDefinition(assignment.agent);
+
+    if (agent === undefined) {
+      continue;
+    }
+
+    const run = await runSpecialistAgent({
+      agent,
+      assignment,
+      files: options.files,
+      mode: options.plan.request.mode,
+      model: options.model,
+      provider: options.provider,
+    });
+
+    runs.push({
+      agent,
+      ...run,
+    });
+  }
+
+  return {
+    runs,
+    findings: runs.flatMap((run) => [...run.output.findings]),
+  };
 }
 
 function resolveCoordinatorAgents(assignments: readonly AgentAssignment[]): ReviewRunPlan["agents"] {

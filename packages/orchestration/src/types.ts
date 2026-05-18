@@ -1,5 +1,5 @@
-import type { AgentDefinition, ReviewRequest } from "@asyncs/core";
-import type { CoordinatorAgentInput, CoordinatorAgentOutput } from "@asyncs/agents";
+import type { AgentDefinition, ChangedFile, ReviewFinding, ReviewRequest } from "@asyncs/core";
+import type { CoordinatorAgentInput, CoordinatorAgentOutput, SpecialistAgentRunResult } from "@asyncs/agents";
 import type { ProviderClient } from "@asyncs/providers";
 import type { REVIEW_RUN_ROUTE_SOURCES } from "./constants";
 
@@ -21,5 +21,21 @@ export type CreateCoordinatedReviewRunPlanOptions = {
   request: ReviewRequest;
   coordinatorInput: CoordinatorAgentInput;
   coordinatorModel: string;
+  provider: ProviderClient;
+};
+
+export type SpecialistAssignmentRun = SpecialistAgentRunResult & {
+  agent: AgentDefinition;
+};
+
+export type SpecialistAssignmentExecutionResult = {
+  runs: SpecialistAssignmentRun[];
+  findings: ReviewFinding[];
+};
+
+export type ExecuteSpecialistAssignmentsOptions = {
+  plan: ReviewRunPlan;
+  files: readonly ChangedFile[];
+  model: string;
   provider: ProviderClient;
 };

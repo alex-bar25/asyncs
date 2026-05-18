@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ReviewRequest } from "@asyncs/core";
 import type { ProviderGenerateObjectRequest } from "@asyncs/providers";
-import { createCoordinatedReviewRunPlan, createReviewRunPlan, type ReviewRunPlan } from "../src/index";
+import {
+  createCoordinatedReviewRunPlan,
+  createReviewRunPlan,
+  executeSpecialistAssignments,
+  type ReviewRunPlan,
+} from "../src/index";
 
 const baseRequest: ReviewRequest = {
   prNumber: 3213,
@@ -153,5 +158,79 @@ describe("review run planning", () => {
     expect(plan.routeSource).toBe("coordinator");
     expect(plan.agents.map((agent) => agent.kind)).toEqual(["backend"]);
     expect(plan.coordinatorOutput?.labels).toEqual(["payments"]);
+  });
+
+  test("executes coordinator assignments with specialist agents", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["payments"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review payment retry correctness.",
+            files: ["services/payments/retry.ts"],
+            focusAreas: ["retry behavior"],
+            context: "Payment retry behavior changed.",
+          },
+          {
+            agent: "custom",
+            purpose: "Custom plugin review.",
+            files: ["services/payments/retry.ts"],
+            focusAreas: ["custom policy"],
+            context: "No built-in definition exists yet.",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["Coordinator selected backend and custom review."],
+      },
+    });
+    const calledSchemas: string[] = [];
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 10,
+          deletions: 2,
+          patch: "@@ retryPayment\n+ await chargeWithRetry(orderId)",
+        },
+      ],
+      model: "specialist-test-model",
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+          calledSchemas.push(request.schemaName);
+
+          return {
+            object: {
+              findings: [
+                {
+                  agent: "backend",
+                  title: "Retry path needs idempotency evidence",
+                  message: "The retry path should show how duplicate charges are prevented.",
+                  severity: "high",
+                  confidence: "medium",
+                  file: "services/payments/retry.ts",
+                  evidence: "The patch calls chargeWithRetry in retryPayment.",
+                  recommendation: "Preserve or add an idempotency key around retries.",
+                },
+              ],
+              summary: "Backend reviewed the retry assignment.",
+            } as TObject,
+          };
+        },
+      },
+    });
+
+    expect(calledSchemas).toEqual(["SpecialistAgentOutput"]);
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0]?.agent.kind).toBe("backend");
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.title).toBe("Retry path needs idempotency evidence");
   });
 });
