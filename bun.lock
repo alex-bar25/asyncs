@@ -43,6 +43,14 @@
       "name": "@asyncs/core",
       "version": "0.1.0",
     },
+    "packages/formatter": {
+      "name": "@asyncs/formatter",
+      "version": "0.1.0",
+      "dependencies": {
+        "@asyncs/consensus": "workspace:*",
+        "@asyncs/core": "workspace:*",
+      },
+    },
     "packages/orchestration": {
       "name": "@asyncs/orchestration",
       "version": "0.1.0",
@@ -72,6 +80,8 @@
     "@asyncs/consensus": ["@asyncs/consensus@workspace:packages/consensus"],
 
     "@asyncs/core": ["@asyncs/core@workspace:packages/core"],
+
+    "@asyncs/formatter": ["@asyncs/formatter@workspace:packages/formatter"],
 
     "@asyncs/orchestration": ["@asyncs/orchestration@workspace:packages/orchestration"],
 
