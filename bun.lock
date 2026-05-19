@@ -32,6 +32,13 @@
         "@asyncs/providers": "workspace:*",
       },
     },
+    "packages/consensus": {
+      "name": "@asyncs/consensus",
+      "version": "0.1.0",
+      "dependencies": {
+        "@asyncs/core": "workspace:*",
+      },
+    },
     "packages/core": {
       "name": "@asyncs/core",
       "version": "0.1.0",
@@ -61,6 +68,8 @@
   },
   "packages": {
     "@asyncs/agents": ["@asyncs/agents@workspace:packages/agents"],
+
+    "@asyncs/consensus": ["@asyncs/consensus@workspace:packages/consensus"],
 
     "@asyncs/core": ["@asyncs/core@workspace:packages/core"],
 
