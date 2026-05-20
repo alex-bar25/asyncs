@@ -71,6 +71,62 @@ describe("splitProviderMessages", () => {
   });
 });
 
+describe("createAnthropicProviderClient.generateObject", () => {
+  test("forwards schema and unwraps tool_use input", async () => {
+    const toolInput = { labels: ["payments"], assignments: [] };
+    const messagesCreate = mock(async () =>
+      fakeAnthropicMessage(
+        [
+          {
+            type: "tool_use",
+            id: "tool_test",
+            name: "CoordinatorAgentOutput",
+            input: toolInput,
+            caller: { type: "direct" },
+          },
+        ],
+        { input: 5, output: 8 },
+      ),
+    );
+
+    const client = createAnthropicProviderClient({
+      apiKey: "test-key",
+      gateway: { messagesCreate },
+    });
+
+    if (client.generateObject === undefined) {
+      throw new Error("Expected generateObject support.");
+    }
+
+    const result = await client.generateObject({
+      model: "claude-3-7-sonnet-20250219",
+      schemaName: "CoordinatorAgentOutput",
+      schema: { type: "object", properties: { labels: { type: "array" } } },
+      messages: [{ role: "user", content: "Plan the review." }],
+    });
+
+    expect(result.object).toEqual(toolInput);
+    expect(result.usage).toEqual({ inputTokens: 5, outputTokens: 8 });
+    expect(result.rawText).toBe(JSON.stringify(toolInput));
+
+    const firstCallArgs: unknown = messagesCreate.mock.calls[0];
+    expect(firstCallArgs).toEqual([
+      expect.objectContaining({
+        model: "claude-3-7-sonnet-20250219",
+        max_tokens: 4096,
+        tools: [
+          {
+            name: "CoordinatorAgentOutput",
+            description: "Return data matching the CoordinatorAgentOutput schema.",
+            input_schema: { type: "object", properties: { labels: { type: "array" } } },
+          },
+        ],
+        tool_choice: { type: "tool", name: "CoordinatorAgentOutput" },
+      }),
+    ]);
+  });
+});
+
 describe("createAnthropicProviderClient.generateText", () => {
   test("returns concatenated text and usage with system message extracted", async () => {
     const messagesCreate = mock(async () =>

@@ -1,5 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ProviderClient, ProviderGenerateTextRequest, ProviderGenerateTextResult, ProviderMessage } from "./types";
+import type {
+  ProviderClient,
+  ProviderGenerateObjectRequest,
+  ProviderGenerateObjectResult,
+  ProviderGenerateTextRequest,
+  ProviderGenerateTextResult,
+  ProviderMessage,
+} from "./types";
 
 export type SplitProviderMessagesResult = {
   system: string | undefined;
@@ -65,6 +72,38 @@ export function createAnthropicProviderClient(options: AnthropicProviderClientOp
           inputTokens: response.usage.input_tokens,
           outputTokens: response.usage.output_tokens,
         },
+      };
+    },
+
+    async generateObject(request: ProviderGenerateObjectRequest): Promise<ProviderGenerateObjectResult> {
+      const split = splitProviderMessages(request.messages);
+      const response = await gateway.messagesCreate({
+        model: request.model,
+        max_tokens: maxTokens,
+        ...(split.system === undefined ? {} : { system: split.system }),
+        messages: split.messages,
+        tools: [
+          {
+            name: request.schemaName,
+            description: `Return data matching the ${request.schemaName} schema.`,
+            input_schema: request.schema,
+          },
+        ],
+        tool_choice: { type: "tool", name: request.schemaName },
+      });
+      const toolUseBlock = response.content.find((block) => block.type === "tool_use");
+
+      if (toolUseBlock === undefined || toolUseBlock.type !== "tool_use") {
+        throw new Error(`Anthropic provider did not return a tool_use block for ${request.schemaName}.`);
+      }
+
+      return {
+        object: toolUseBlock.input,
+        usage: {
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+        },
+        rawText: JSON.stringify(toolUseBlock.input),
       };
     },
   };
