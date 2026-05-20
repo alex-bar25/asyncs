@@ -42,20 +42,14 @@ describe("provider contracts", () => {
   });
 
   test("defines a structured generation provider client", async () => {
-    type ReviewPlan = {
-      labels: string[];
-    };
-
     const client = defineProviderClient({
       kind: "anthropic",
       async generateText() {
         return { text: "unused" };
       },
-      async generateObject<TObject>() {
+      async generateObject() {
         return {
-          object: {
-            labels: ["backend"],
-          } as TObject,
+          object: { labels: ["backend"] },
         };
       },
     });
@@ -64,13 +58,14 @@ describe("provider contracts", () => {
       throw new Error("Expected structured generation support.");
     }
 
-    const result = await client.generateObject<ReviewPlan>({
+    const result = await client.generateObject({
       model: "test-model",
       schemaName: "ReviewPlan",
+      schema: { type: "object" },
       messages: [{ role: "user", content: "Plan the review." }],
     });
 
-    expect(result.object.labels).toEqual(["backend"]);
+    expect(result.object).toEqual({ labels: ["backend"] });
   });
 
   test("registers and retrieves provider clients", () => {
