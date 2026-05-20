@@ -33,8 +33,10 @@ export type AnthropicMessagesGateway = {
 
 export type AnthropicProviderClientOptions = {
   apiKey: string;
-  defaultModel?: string;
   maxTokens?: number;
+  /**
+   * @internal Test-only injection seam. Not part of the public API.
+   */
   gateway?: AnthropicMessagesGateway;
 };
 
@@ -52,7 +54,10 @@ export function createAnthropicProviderClient(options: AnthropicProviderClientOp
         ...(split.system === undefined ? {} : { system: split.system }),
         messages: split.messages,
       });
-      const text = response.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+      const text = response.content
+        .filter((block): block is Anthropic.TextBlock => block.type === "text")
+        .map((block) => block.text)
+        .join("");
 
       return {
         text,
