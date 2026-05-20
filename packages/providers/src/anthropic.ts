@@ -1,4 +1,5 @@
-import type { ProviderMessage } from "./types";
+import Anthropic from "@anthropic-ai/sdk";
+import type { ProviderClient, ProviderGenerateTextRequest, ProviderGenerateTextResult, ProviderMessage } from "./types";
 
 export type SplitProviderMessagesResult = {
   system: string | undefined;
@@ -21,5 +22,55 @@ export function splitProviderMessages(messages: readonly ProviderMessage[]): Spl
   return {
     system: systems.length === 0 ? undefined : systems.join("\n\n"),
     messages: others,
+  };
+}
+
+const DEFAULT_MAX_TOKENS = 4096;
+
+export type AnthropicMessagesGateway = {
+  messagesCreate(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
+};
+
+export type AnthropicProviderClientOptions = {
+  apiKey: string;
+  defaultModel?: string;
+  maxTokens?: number;
+  gateway?: AnthropicMessagesGateway;
+};
+
+export function createAnthropicProviderClient(options: AnthropicProviderClientOptions): ProviderClient {
+  const gateway = options.gateway ?? createDefaultGateway(options.apiKey);
+  const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS;
+
+  return {
+    kind: "anthropic",
+    async generateText(request: ProviderGenerateTextRequest): Promise<ProviderGenerateTextResult> {
+      const split = splitProviderMessages(request.messages);
+      const response = await gateway.messagesCreate({
+        model: request.model,
+        max_tokens: maxTokens,
+        ...(split.system === undefined ? {} : { system: split.system }),
+        messages: split.messages,
+      });
+      const text = response.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+
+      return {
+        text,
+        usage: {
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+        },
+      };
+    },
+  };
+}
+
+function createDefaultGateway(apiKey: string): AnthropicMessagesGateway {
+  const client = new Anthropic({ apiKey });
+
+  return {
+    messagesCreate(params) {
+      return client.messages.create(params);
+    },
   };
 }
