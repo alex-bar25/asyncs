@@ -10,9 +10,9 @@ Instead of one generic AI reviewer, asyncs detects what changed in a PR, selects
 
 asyncs is designed as:
 
-- an interactive CLI
-- a GitHub PR review tool
-- a multi-agent orchestration harness
+- a sub-agent driven review harness (core library)
+- a GitHub Action for teams (primary distribution)
+- a minimal CLI for local use, plugin development, and debugging
 - a plugin-driven rule system
 - a learning project for AI tooling, agent harnesses, and code review automation
 
@@ -57,50 +57,35 @@ The final output is produced by a consensus layer that combines, ranks, and filt
 asyncs is:
 
 ```txt
-sub-agent driven PR review
+sub-agent driven PR review harness
 +
-interactive CLI
+core orchestration library
++
+GitHub Action for teams
 +
 plugin system
 +
-open-source AI review harness
+minimal CLI for local-diff review and plugin development
 ```
 
-It should feel like:
+The CLI is the engine, not the product.
 
-```txt
-Codex-style terminal experience
-but focused on reviewing pull requests
-with specialist agents
-```
+The common workflow — "review every PR automatically" — is owned by the GitHub Action. Nobody wants to remember to run a CLI after every push.
 
-Users should be able to run:
+The CLI exists for:
 
-```bash
-asyncs
-```
+- running asyncs locally on a diff before pushing
+- developing and testing plugins
+- debugging the harness itself
 
-and interactively:
+That's it. No interactive repo picker. No PR list browser. No fancy terminal UI. The CLI stays minimal so the engine stays the focus.
 
-- select a repository
-- view open PRs
-- pick a PR
-- choose review mode
-- choose agents
-- run the review
-- inspect findings
-- post comments to GitHub
-- export a report
+Distribution priorities, in order:
 
-Example:
-
-```bash
-asyncs pr review 3213
-asyncs pr review 3213 --agents backend,security,architecture
-asyncs pr review 3213 --dry-run
-asyncs pr review 3213 --post-comments
-asyncs pr review 3213 --mode low-noise
-```
+1. **Core library** — the orchestration engine, agents, consensus, formatter, plugin system. This is the value.
+2. **GitHub Action** — the primary product surface for teams. Drops asyncs into PR workflows with one YAML block.
+3. **CLI** — thin wrapper for local and plugin-dev use. Not the showcase.
+4. **GitHub App** — later, if it makes sense (lets organizations install asyncs without per-repo YAML).
 
 ---
 
@@ -145,7 +130,7 @@ Bun.
 Bun is preferred because asyncs is:
 
 - TypeScript-first
-- CLI/tooling-heavy
+- tooling-heavy
 - AI SDK-heavy
 - plugin-driven
 - open-source devtool focused
@@ -168,10 +153,7 @@ Code should still avoid unnecessary Bun-only lock-in when possible, so future No
 
 ## CLI
 
-- commander
-- ink
-- react
-- @inkjs/ui
+- commander (argument parsing)
 
 ## GitHub
 
@@ -219,9 +201,9 @@ Code should still avoid unnecessary Bun-only lock-in when possible, so future No
 # High-Level Architecture
 
 ```txt
-Interactive CLI / GitHub Action / GitHub App
+GitHub Action / CLI / GitHub App
                     ↓
-              PR Loader
+              PR Loader (octokit or simple-git)
                     ↓
             Context Collector
                     ↓
@@ -237,64 +219,31 @@ Interactive CLI / GitHub Action / GitHub App
                     ↓
             Review Formatter
                     ↓
-       CLI Output / GitHub Comments / Report
+       GitHub Comments / CLI Output / Report
 ```
+
+The same pipeline drives every entry point. The Action, CLI, and (future) GitHub App are thin shells around the same orchestration core.
 
 ---
 
 # Main Apps
 
-## 1. Interactive CLI
+## 1. Core Library
 
-The CLI is the main developer experience.
+The orchestration engine. Lives in `packages/`. Coordinates the review swarm:
 
-It should allow users to:
+- coordinator agent planning
+- parallel specialist execution
+- consensus and noise filtering
+- formatting
+- plugin loading
+- provider abstraction
 
-```txt
-1. Authenticate with GitHub
-2. Select repository
-3. List open PRs
-4. Pick PR by number
-5. Preview changed files
-6. Select review mode
-7. Select agents
-8. Run review
-9. Inspect findings
-10. Post comments or export report
-```
-
-Example interactive screen:
-
-```txt
-asyncs
-
-Open PRs:
-> #3213 Add payment retry orchestration
-  #3214 Refactor checkout UI
-  #3215 Update auth middleware
-
-Review mode:
-> Low-noise
-  Full
-  Security only
-  Architecture only
-
-Agents:
-[x] Backend
-[x] Security
-[x] Architecture
-[x] Testing
-[ ] Frontend
-[ ] DevOps
-```
-
----
+Every other entry point (Action, CLI, GitHub App) wraps the core library. The library is the value of the project.
 
 ## 2. GitHub Action
 
-Users should be able to add asyncs to CI.
-
-Example:
+Primary distribution surface. Teams drop asyncs into CI with a single YAML block.
 
 ```yaml
 name: asyncs review
@@ -312,21 +261,42 @@ jobs:
         with:
           mode: low-noise
           agents: backend,security,architecture,testing
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
----
+The Action handles auth via repo secrets, posts inline comments via the GitHub API, and runs the same review pipeline as the CLI.
 
-## 3. GitHub App
+## 3. CLI
 
-Future direction.
+Minimal wrapper. Two real use cases:
 
-The GitHub App can:
+- **Local-diff review** — review the working tree or staged diff before pushing.
+- **Plugin development** — scaffold and test custom rules.
 
-- listen for PR events
-- run asyncs automatically
-- post review comments
-- support repo-level configuration
-- support organization rules
+```bash
+# Review the working-tree diff against main
+asyncs review --local
+
+# Review only staged changes
+asyncs review --staged
+
+# Review a specific PR (handy for CI debugging or one-off runs)
+asyncs review --pr 3213 --repo alex/checkout-api
+
+# Plugin dev
+asyncs plugins create payment-idempotency
+asyncs plugins list
+
+# Config bootstrap
+asyncs config init
+```
+
+No interactive repo picker, no PR list browser, no Ink-based terminal UI. Argument parsing via commander is enough.
+
+## 4. GitHub App (future)
+
+If the Action proves out, the GitHub App lets organizations install asyncs once instead of per-repo YAML. Same engine underneath.
 
 ---
 
@@ -337,12 +307,6 @@ asyncs/
 ├── apps/
 │   ├── cli/
 │   │   ├── src/
-│   │   │   ├── app.tsx
-│   │   │   ├── commands/
-│   │   │   ├── screens/
-│   │   │   ├── components/
-│   │   │   ├── hooks/
-│   │   │   └── main.ts
 │   │   └── package.json
 │   │
 │   ├── action/
@@ -377,6 +341,7 @@ asyncs/
 ├── templates/
 ├── asyncs.config.ts
 ├── AGENTS.md
+├── CLAUDE.md
 └── README.md
 ```
 
@@ -411,7 +376,7 @@ Owns GitHub integration:
 - file loading
 - comment posting
 - review summary posting
-- repository selection
+- repository selection (for the Action / GitHub App, not interactive UX)
 
 ---
 
@@ -871,70 +836,60 @@ Prefer one strong comment over five weak comments.
 
 # CLI Commands
 
+The CLI is intentionally small. Its job is to review a diff and help develop plugins.
+
 ```bash
-asyncs
-asyncs auth login
-asyncs repo select
-asyncs pr list
-asyncs pr review 3213
-asyncs pr review 3213 --agents backend,security
-asyncs pr review 3213 --mode low-noise
-asyncs pr review 3213 --dry-run
-asyncs pr review 3213 --post-comments
+# Review the working-tree diff against main (default base branch)
+asyncs review --local
+
+# Review only staged changes
+asyncs review --staged
+
+# Review a specific PR by number (requires GITHUB_TOKEN or octokit auth)
+asyncs review --pr 3213 --repo alex/checkout-api
+
+# Mode and agent selection (applies to any review command)
+asyncs review --local --mode security
+asyncs review --local --agents backend,security
+
+# Plugin dev
 asyncs plugins list
 asyncs plugins create payment-idempotency
+
+# Config bootstrap
 asyncs config init
 ```
 
+Commands that don't belong on the CLI:
+
+- `asyncs auth login` — auth is per-environment (env vars locally, secrets in CI, OAuth for the Action / GitHub App)
+- `asyncs repo select`, `asyncs pr list` — these are interactive UX features. The CLI's job is to take a diff and review it, not to browse PRs
+- An interactive entry point — argument-parsed commands are simpler and easier to script
+
 ---
 
-# Example CLI Flow
+# Example CLI Flow (non-interactive)
 
 ```txt
-$ asyncs
+$ asyncs review --local --mode low-noise
 
-Welcome to asyncs
+Running review against working-tree diff (base: main)
 
-? Select repository:
-> alex/checkout-api
-  alex/payment-service
-  alex/frontend-app
-
-? Select PR:
-> #3213 Add payment retry orchestration
-  #3214 Refactor checkout UI
-  #3215 Update auth middleware
-
-? Select review mode:
-> Low-noise
-  Full
-  Security only
-  Architecture only
-
-? Select agents:
-[x] Backend
-[x] Security
-[x] Architecture
-[x] Testing
-[ ] Frontend
-[ ] DevOps
-
-Running review...
-
-Backend Agent      complete
-Security Agent     complete
-Architecture Agent complete
-Testing Agent      complete
+Coordinator Agent      planned 4 specialists
+Backend Agent          complete
+Security Agent         complete
+Architecture Agent     complete
+Testing Agent          complete
 
 Findings:
 - 1 high severity
 - 2 medium severity
-- 1 low severity
+- 1 low severity (suppressed by noise filter)
 
-? Post comments to GitHub?
-> Yes
-  Export only
+Wrote report to .asyncs/review-<sha>.md
 ```
+
+The Action runs the same pipeline and posts findings as inline comments instead of writing a report file.
 
 ---
 
@@ -1019,15 +974,6 @@ The project should avoid:
 
 # Future Ideas
 
-## Local Review Mode
-
-Review local diffs without GitHub:
-
-```bash
-asyncs review --local
-asyncs review --staged
-```
-
 ## Architecture Memory
 
 Learn repo-specific conventions:
@@ -1092,7 +1038,6 @@ It is:
 - a swarm orchestrator
 - a plugin framework
 - an AI tooling learning project
-- a terminal-first developer tool
 - an open-source alternative to closed AI review tools
 
 The core differentiator is:
@@ -1101,20 +1046,24 @@ The core differentiator is:
 Sub-agent driven development concepts applied to PR reviews.
 ```
 
+The CLI is the engine. The Action is the product.
+
 ---
 
 # Potential CV Description
 
-Built asyncs, an open-source sub-agent driven AI PR review harness that routes pull request diffs to specialized reviewers for backend, frontend, security, testing, architecture, and performance analysis, with an interactive Bun/TypeScript CLI, GitHub integration, and plugin system for custom engineering rules.
+Built asyncs, an open-source sub-agent driven AI PR review harness that routes pull request diffs to specialized reviewers for backend, frontend, security, testing, architecture, and performance analysis. Shipped as a TypeScript orchestration library, a GitHub Action for teams, and a minimal CLI for local diff review and plugin development, with a coordinator-agent planner and an extensible plugin system for custom engineering rules.
 
 ---
 
 # End Goal
 
-A developer should be able to run:
+A team should be able to add asyncs to a repo with a single Action YAML block, and feel like a small team of specialized reviewers analyzed every PR carefully, filtered out noise, and only commented when something actually mattered.
+
+Developers should be able to run the same review locally before pushing, with one command:
 
 ```bash
-asyncs pr review 3213
+asyncs review --local
 ```
 
-and feel like a small team of specialized reviewers analyzed the PR carefully, filtered out noise, and only commented when something actually mattered.
+Same engine. Different surface.
