@@ -5,7 +5,7 @@ import {
   type AgentKind,
   type ReviewRequest,
 } from "@asyncs/core";
-import { resolveAgentRoute } from "@asyncs/routing";
+import { runPreviewReviewPipeline } from "@asyncs/orchestration";
 import { AUTO_AGENT_SELECTION_LABEL, PR_REVIEW_OPTIONS } from "./constants";
 import type { CliResult, ParseResult } from "./types";
 
@@ -105,16 +105,21 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult<ReviewRequest> 
 
 function renderPrReviewPreview(options: ReviewRequest): string {
   const agents = options.agents.length > 0 ? options.agents.join(",") : AUTO_AGENT_SELECTION_LABEL;
-  const route = resolveAgentRoute(options);
-  const resolvedAgents = route.agents.map((agent) => agent.kind).join(",");
+  const preview = runPreviewReviewPipeline({ request: options });
+  const plan = preview.plan;
+  const resolvedAgents = plan.agents.map((agent) => agent.kind).join(",");
+  const previewFiles = preview.files.map((file) => file.path).join(",");
 
   return `Review request
     PR: ${options.prNumber}
     Mode: ${options.mode}
     Agents: ${agents}
-    Route source: ${route.source}
+    Route source: ${plan.routeSource}
     Resolved agents: ${resolvedAgents}
+    Preview files: ${previewFiles}
     Post comments: ${options.postComments}
     Dry run: ${options.dryRun}
+
+${preview.markdown}
 `;
 }

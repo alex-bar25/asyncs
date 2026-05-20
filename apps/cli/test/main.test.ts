@@ -43,8 +43,14 @@ describe("runCli", () => {
     expect(result.stdout).toContain("Agents: auto");
     expect(result.stdout).toContain("Route source: auto");
     expect(result.stdout).toContain("Resolved agents: backend,security,architecture,testing");
+    expect(result.stdout).toContain("Preview files: preview/request.ts");
     expect(result.stdout).toContain("Post comments: false");
     expect(result.stdout).toContain("Dry run: false");
+    expect(result.stdout).toContain("# asyncs review preview");
+    expect(result.stdout).toContain("Findings: 1");
+    expect(result.stdout).toContain("Deduplicated findings: 1");
+    expect(result.stdout).toContain("Suppressed noisy findings: 1");
+    expect(result.stdout).toContain("### Backend - Preview finding: route smoke test");
   });
 
   test("previews a PR review request with explicit options", () => {

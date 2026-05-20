@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@asyncs/core": "workspace:*",
-    "@asyncs/routing": "workspace:*"
+    "@asyncs/orchestration": "workspace:*"
   }
 }

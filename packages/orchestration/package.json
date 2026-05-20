@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@asyncs/agents": "workspace:*",
+    "@asyncs/consensus": "workspace:*",
     "@asyncs/core": "workspace:*",
+    "@asyncs/formatter": "workspace:*",
     "@asyncs/providers": "workspace:*",
     "@asyncs/routing": "workspace:*"
   }

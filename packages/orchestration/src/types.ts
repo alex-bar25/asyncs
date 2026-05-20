@@ -1,5 +1,6 @@
 import type { AgentDefinition, ChangedFile, ReviewFinding, ReviewRequest } from "@asyncs/core";
 import type { CoordinatorAgentInput, CoordinatorAgentOutput, SpecialistAgentRunResult } from "@asyncs/agents";
+import type { ConsensusReport } from "@asyncs/consensus";
 import type { ProviderClient } from "@asyncs/providers";
 import type { REVIEW_RUN_ROUTE_SOURCES } from "./constants";
 
@@ -38,4 +39,15 @@ export type ExecuteSpecialistAssignmentsOptions = {
   files: readonly ChangedFile[];
   model: string;
   provider: ProviderClient;
+};
+
+export type RunPreviewReviewPipelineOptions = {
+  request: ReviewRequest;
+};
+
+export type PreviewReviewPipelineResult = {
+  plan: ReviewRunPlan;
+  files: readonly ChangedFile[];
+  report: ConsensusReport;
+  markdown: string;
 };

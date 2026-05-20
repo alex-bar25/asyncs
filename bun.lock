@@ -21,7 +21,7 @@
       },
       "dependencies": {
         "@asyncs/core": "workspace:*",
-        "@asyncs/routing": "workspace:*",
+        "@asyncs/orchestration": "workspace:*",
       },
     },
     "packages/agents": {
@@ -56,7 +56,9 @@
       "version": "0.1.0",
       "dependencies": {
         "@asyncs/agents": "workspace:*",
+        "@asyncs/consensus": "workspace:*",
         "@asyncs/core": "workspace:*",
+        "@asyncs/formatter": "workspace:*",
         "@asyncs/providers": "workspace:*",
         "@asyncs/routing": "workspace:*",
       },
