@@ -125,6 +125,30 @@ describe("createAnthropicProviderClient.generateObject", () => {
       }),
     ]);
   });
+
+  test("throws with the schema name when no tool_use block is returned", async () => {
+    const messagesCreate = mock(async () =>
+      fakeAnthropicMessage([{ type: "text", text: "I won't use the tool.", citations: null }], { input: 1, output: 2 }),
+    );
+
+    const client = createAnthropicProviderClient({
+      apiKey: "test-key",
+      gateway: { messagesCreate },
+    });
+
+    if (client.generateObject === undefined) {
+      throw new Error("Expected generateObject support.");
+    }
+
+    await expect(
+      client.generateObject({
+        model: "claude-3-7-sonnet-20250219",
+        schemaName: "CoordinatorAgentOutput",
+        schema: { type: "object" },
+        messages: [{ role: "user", content: "Plan the review." }],
+      }),
+    ).rejects.toThrow("did not return a tool_use block for CoordinatorAgentOutput");
+  });
 });
 
 describe("createAnthropicProviderClient.generateText", () => {
