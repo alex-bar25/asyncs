@@ -34,6 +34,9 @@ export function splitProviderMessages(messages: readonly ProviderMessage[]): Spl
 
 const DEFAULT_MAX_TOKENS = 4096;
 
+/**
+ * @internal Test-only injection seam for the Anthropic SDK boundary. Not part of the public API.
+ */
 export type AnthropicMessagesGateway = {
   messagesCreate(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
 };
