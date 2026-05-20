@@ -81,4 +81,11 @@ describe("runCli", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("PR number must be a positive integer.");
   });
+
+  test("rejects agent kinds that are not built in", () => {
+    const result = runCli(["pr", "review", "3213", "--agents", "custom"]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Invalid agent: custom");
+  });
 });

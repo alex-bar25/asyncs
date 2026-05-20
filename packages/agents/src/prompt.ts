@@ -96,7 +96,10 @@ function formatChangedFiles(input: Pick<CoordinatorAgentInput, "files">): string
 }
 
 function fenced(content: string): string {
-  return ["```", content, "```"].join("\n");
+  const longestBacktickRun = (content.match(/`+/g) ?? []).reduce((max, run) => Math.max(max, run.length), 0);
+  const fence = "`".repeat(Math.max(3, longestBacktickRun + 1));
+
+  return [fence, content, fence].join("\n");
 }
 
 export function buildSpecialistAgentMessages(input: SpecialistAgentInput): ProviderMessage[] {

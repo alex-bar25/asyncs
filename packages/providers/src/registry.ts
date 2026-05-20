@@ -1,8 +1,10 @@
 import { BUILT_IN_PROVIDER_KINDS } from "./constants";
 import type { BuiltInProviderKind, ProviderClient, ProviderKind, ProviderRegistry } from "./types";
 
+const BUILT_IN_PROVIDER_KIND_VALUES: ReadonlySet<string> = new Set(BUILT_IN_PROVIDER_KINDS);
+
 export function isBuiltInProviderKind(kind: string): kind is BuiltInProviderKind {
-  return BUILT_IN_PROVIDER_KINDS.includes(kind as BuiltInProviderKind);
+  return BUILT_IN_PROVIDER_KIND_VALUES.has(kind);
 }
 
 export function defineProviderClient(client: ProviderClient): ProviderClient {

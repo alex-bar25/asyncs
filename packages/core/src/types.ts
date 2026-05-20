@@ -41,13 +41,13 @@ export type ReviewRequest = {
 };
 
 export type ReviewFinding = {
-  agent: AgentKind | string;
+  agent: AgentKind | (string & {});
   title: string;
   message: string;
   severity: Severity;
   confidence: Confidence;
-  file?: string;
-  line?: number;
+  file?: string | undefined;
+  line?: number | undefined;
   evidence: string;
   recommendation: string;
 };

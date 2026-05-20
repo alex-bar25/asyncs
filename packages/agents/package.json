@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@asyncs/core": "workspace:*",
-    "@asyncs/providers": "workspace:*"
+    "@asyncs/providers": "workspace:*",
+    "zod": "^4.4.3"
   }
 }

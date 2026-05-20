@@ -1,10 +1,5 @@
-import {
-  DEFAULT_REVIEW_REQUEST_OPTIONS,
-  isAgentKind,
-  isReviewMode,
-  type AgentKind,
-  type ReviewRequest,
-} from "@asyncs/core";
+import { isBuiltInAgentKind, type BuiltInAgentKind } from "@asyncs/agents";
+import { DEFAULT_REVIEW_REQUEST_OPTIONS, isReviewMode, type ReviewRequest } from "@asyncs/core";
 import { runPreviewReviewPipeline } from "@asyncs/orchestration";
 import { AUTO_AGENT_SELECTION_LABEL, PR_REVIEW_OPTIONS } from "./constants";
 import type { CliResult, ParseResult } from "./types";
@@ -82,10 +77,10 @@ function parsePrReviewArgs(args: readonly string[]): ParseResult<ReviewRequest> 
         return { ok: false, error: `Missing value for ${PR_REVIEW_OPTIONS.agents}.` };
       }
 
-      const agents: AgentKind[] = [];
+      const agents: BuiltInAgentKind[] = [];
 
       for (const agent of agentsValue.split(",").filter(Boolean)) {
-        if (!isAgentKind(agent)) {
+        if (!isBuiltInAgentKind(agent)) {
           return { ok: false, error: `Invalid agent: ${agent}` };
         }
 

@@ -5,6 +5,7 @@ import {
   SPECIALIST_AGENT_STRUCTURED_OUTPUT_ERROR,
 } from "./constants";
 import { buildCoordinatorAgentMessages, buildSpecialistAgentMessages } from "./prompt";
+import { CoordinatorAgentOutputSchema, SpecialistAgentOutputSchema } from "./schemas";
 import type {
   CoordinatorAgentRunResult,
   CoordinatorAgentOutput,
@@ -24,9 +25,10 @@ export async function runCoordinatorAgent(options: RunCoordinatorAgentOptions): 
     schemaName: COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME,
     messages: buildCoordinatorAgentMessages(options.input),
   });
+  const parsed = CoordinatorAgentOutputSchema.parse(result.object);
 
   return {
-    output: result.object,
+    output: parsed,
     ...(result.usage === undefined ? {} : { usage: result.usage }),
     ...(result.rawText === undefined ? {} : { rawText: result.rawText }),
   };
@@ -42,9 +44,10 @@ export async function runSpecialistAgent(options: RunSpecialistAgentOptions): Pr
     schemaName: SPECIALIST_AGENT_OUTPUT_SCHEMA_NAME,
     messages: buildSpecialistAgentMessages(options),
   });
+  const parsed = SpecialistAgentOutputSchema.parse(result.object);
 
   return {
-    output: result.object,
+    output: parsed,
     ...(result.usage === undefined ? {} : { usage: result.usage }),
     ...(result.rawText === undefined ? {} : { rawText: result.rawText }),
   };

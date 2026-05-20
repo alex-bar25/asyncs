@@ -57,33 +57,30 @@ export async function createCoordinatedReviewRunPlan(
 export async function executeSpecialistAssignments(
   options: ExecuteSpecialistAssignmentsOptions,
 ): Promise<SpecialistAssignmentExecutionResult> {
-  const runs: SpecialistAssignmentExecutionResult["runs"] = [];
-
-  for (const assignment of options.plan.coordinatorOutput?.assignments ?? []) {
+  const eligibleAssignments = (options.plan.coordinatorOutput?.assignments ?? []).flatMap((assignment) => {
     if (!isBuiltInAgentKind(assignment.agent)) {
-      continue;
+      return [];
     }
 
     const agent = getBuiltInAgentDefinition(assignment.agent);
 
-    if (agent === undefined) {
-      continue;
-    }
+    return agent === undefined ? [] : [{ assignment, agent }];
+  });
 
-    const run = await runSpecialistAgent({
-      agent,
-      assignment,
-      files: options.files,
-      mode: options.plan.request.mode,
-      model: options.model,
-      provider: options.provider,
-    });
+  const runs = await Promise.all(
+    eligibleAssignments.map(async ({ assignment, agent }) => {
+      const run = await runSpecialistAgent({
+        agent,
+        assignment,
+        files: options.files,
+        mode: options.plan.request.mode,
+        model: options.model,
+        provider: options.provider,
+      });
 
-    runs.push({
-      agent,
-      ...run,
-    });
-  }
+      return { agent, ...run };
+    }),
+  );
 
   return {
     runs,

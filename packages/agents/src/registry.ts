@@ -20,8 +20,10 @@ export function getBuiltInAgentDefinition(kind: BuiltInAgentKind): AgentDefiniti
   return BUILT_IN_AGENT_DEFINITIONS.find((agent) => agent.kind === kind);
 }
 
+const BUILT_IN_AGENT_KIND_VALUES: ReadonlySet<string> = new Set(BUILT_IN_AGENT_KINDS);
+
 export function isBuiltInAgentKind(kind: string): kind is BuiltInAgentKind {
-  return BUILT_IN_AGENT_KINDS.includes(kind as BuiltInAgentKind);
+  return BUILT_IN_AGENT_KIND_VALUES.has(kind);
 }
 
 export function getCoordinatorAgentDefinition(): CoordinatorAgentDefinition {
