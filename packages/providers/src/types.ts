@@ -26,14 +26,20 @@ export type ProviderGenerateTextResult = {
   usage?: ProviderUsage;
 };
 
+export type ProviderJsonSchema = {
+  type: "object";
+  [key: string]: unknown;
+};
+
 export type ProviderGenerateObjectRequest = {
   model: string;
   schemaName: string;
+  schema: ProviderJsonSchema;
   messages: readonly ProviderMessage[];
 };
 
-export type ProviderGenerateObjectResult<TObject> = {
-  object: TObject;
+export type ProviderGenerateObjectResult = {
+  object: unknown;
   usage?: ProviderUsage;
   rawText?: string;
 };
@@ -41,7 +47,7 @@ export type ProviderGenerateObjectResult<TObject> = {
 export type ProviderClient = {
   kind: ProviderKind;
   generateText(request: ProviderGenerateTextRequest): Promise<ProviderGenerateTextResult>;
-  generateObject?<TObject>(request: ProviderGenerateObjectRequest): Promise<ProviderGenerateObjectResult<TObject>>;
+  generateObject?(request: ProviderGenerateObjectRequest): Promise<ProviderGenerateObjectResult>;
 };
 
 export type ProviderRegistry = {

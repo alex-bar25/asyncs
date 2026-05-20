@@ -129,7 +129,7 @@ describe("review run planning", () => {
         async generateText() {
           return { text: "unused" };
         },
-        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+        async generateObject(request: ProviderGenerateObjectRequest) {
           capturedModel = request.model;
           capturedMessageText = request.messages.map((message) => message.content).join("\n");
 
@@ -147,7 +147,7 @@ describe("review run planning", () => {
               ],
               confidence: "high",
               reasoning: ["Coordinator selected backend review for retry behavior."],
-            } as TObject,
+            },
           };
         },
       },
@@ -204,7 +204,7 @@ describe("review run planning", () => {
         async generateText() {
           return { text: "unused" };
         },
-        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+        async generateObject(request: ProviderGenerateObjectRequest) {
           calledSchemas.push(request.schemaName);
 
           return {
@@ -222,7 +222,7 @@ describe("review run planning", () => {
                 },
               ],
               summary: "Backend reviewed the retry assignment.",
-            } as TObject,
+            },
           };
         },
       },

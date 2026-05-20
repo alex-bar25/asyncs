@@ -227,13 +227,13 @@ describe("coordinator agent contract", () => {
         async generateText() {
           return { text: "unused" };
         },
-        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+        async generateObject(request: ProviderGenerateObjectRequest) {
           capturedModel = request.model;
           capturedSchemaName = request.schemaName;
           capturedMessageText = request.messages.map((message) => message.content).join("\n");
 
           return {
-            object: output as TObject,
+            object: output,
             rawText: '{"labels":["payments"]}',
             usage: {
               inputTokens: 10,
@@ -370,13 +370,13 @@ describe("specialist agent contract", () => {
         async generateText() {
           return { text: "unused" };
         },
-        async generateObject<TObject>(request: ProviderGenerateObjectRequest) {
+        async generateObject(request: ProviderGenerateObjectRequest) {
           capturedModel = request.model;
           capturedSchemaName = request.schemaName;
           capturedMessageText = request.messages.map((message) => message.content).join("\n");
 
           return {
-            object: output as TObject,
+            object: output,
             usage: {
               inputTokens: 11,
               outputTokens: 22,
@@ -447,7 +447,7 @@ describe("specialist agent contract", () => {
           async generateText() {
             return { text: "unused" };
           },
-          async generateObject<TObject>() {
+          async generateObject() {
             return {
               object: {
                 findings: [
@@ -462,7 +462,7 @@ describe("specialist agent contract", () => {
                   },
                 ],
                 summary: "Specialist with invalid severity.",
-              } as TObject,
+              },
             };
           },
         },
