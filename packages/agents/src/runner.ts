@@ -5,7 +5,12 @@ import {
   SPECIALIST_AGENT_STRUCTURED_OUTPUT_ERROR,
 } from "./constants";
 import { buildCoordinatorAgentMessages, buildSpecialistAgentMessages } from "./prompt";
-import { CoordinatorAgentOutputSchema, SpecialistAgentOutputSchema } from "./schemas";
+import {
+  CoordinatorAgentOutputJsonSchema,
+  CoordinatorAgentOutputSchema,
+  SpecialistAgentOutputJsonSchema,
+  SpecialistAgentOutputSchema,
+} from "./schemas";
 import type {
   CoordinatorAgentRunResult,
   RunCoordinatorAgentOptions,
@@ -21,7 +26,7 @@ export async function runCoordinatorAgent(options: RunCoordinatorAgentOptions): 
   const result = await options.provider.generateObject({
     model: options.model,
     schemaName: COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME,
-    schema: { type: "object" },
+    schema: CoordinatorAgentOutputJsonSchema,
     messages: buildCoordinatorAgentMessages(options.input),
   });
   const parsed = CoordinatorAgentOutputSchema.parse(result.object);
@@ -41,7 +46,7 @@ export async function runSpecialistAgent(options: RunSpecialistAgentOptions): Pr
   const result = await options.provider.generateObject({
     model: options.model,
     schemaName: SPECIALIST_AGENT_OUTPUT_SCHEMA_NAME,
-    schema: { type: "object" },
+    schema: SpecialistAgentOutputJsonSchema,
     messages: buildSpecialistAgentMessages(options),
   });
   const parsed = SpecialistAgentOutputSchema.parse(result.object);
