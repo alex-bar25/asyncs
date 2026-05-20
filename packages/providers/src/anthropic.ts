@@ -91,9 +91,9 @@ export function createAnthropicProviderClient(options: AnthropicProviderClientOp
         ],
         tool_choice: { type: "tool", name: request.schemaName },
       });
-      const toolUseBlock = response.content.find((block) => block.type === "tool_use");
+      const toolUseBlock = response.content.find((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
 
-      if (toolUseBlock === undefined || toolUseBlock.type !== "tool_use") {
+      if (toolUseBlock === undefined) {
         throw new Error(`Anthropic provider did not return a tool_use block for ${request.schemaName}.`);
       }
 
