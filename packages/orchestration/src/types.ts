@@ -1,8 +1,9 @@
-import type { AgentDefinition, ChangedFile, ReviewFinding, ReviewRequest } from "@asyncs/core";
+import type { AgentDefinition, ChangedFile, Logger, ReviewFinding, ReviewRequest } from "@asyncs/core";
 import type { CoordinatorAgentInput, CoordinatorAgentOutput, SpecialistAgentRunResult } from "@asyncs/agents";
 import type { ConsensusReport } from "@asyncs/consensus";
 import type { ProviderClient } from "@asyncs/providers";
 import type { REVIEW_RUN_ROUTE_SOURCES } from "./constants";
+import type { RetryPolicy } from "./robustness";
 
 export type ReviewRunRouteSource = (typeof REVIEW_RUN_ROUTE_SOURCES)[number];
 
@@ -23,15 +24,17 @@ export type CreateCoordinatedReviewRunPlanOptions = {
   coordinatorInput: CoordinatorAgentInput;
   coordinatorModel: string;
   provider: ProviderClient;
-};
+} & Pick<RobustnessOptions, "timeoutMs" | "retryPolicy" | "logger">;
 
 export type SpecialistAssignmentRun = SpecialistAgentRunResult & {
   agent: AgentDefinition;
+  attempts: number;
 };
 
 export type SpecialistAssignmentExecutionResult = {
   runs: SpecialistAssignmentRun[];
   findings: ReviewFinding[];
+  failures: SpecialistFailure[];
 };
 
 export type ExecuteSpecialistAssignmentsOptions = {
@@ -39,7 +42,7 @@ export type ExecuteSpecialistAssignmentsOptions = {
   files: readonly ChangedFile[];
   model: string;
   provider: ProviderClient;
-};
+} & RobustnessOptions;
 
 export type RunPreviewReviewPipelineOptions = {
   request: ReviewRequest;
@@ -51,3 +54,18 @@ export type PreviewReviewPipelineResult = {
   report: ConsensusReport;
   markdown: string;
 };
+
+export type SpecialistFailure = {
+  agent: AgentDefinition;
+  attempts: number;
+  error: string;
+};
+
+export type RobustnessOptions = {
+  timeoutMs?: number;
+  retryPolicy?: RetryPolicy;
+  concurrency?: number;
+  logger?: Logger;
+};
+
+export type { RetryPolicy } from "./robustness";

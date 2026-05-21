@@ -1,10 +1,12 @@
 import type { ReviewFinding } from "@asyncs/core";
 import { DEFAULT_EMPTY_REVIEW_MESSAGE, DEFAULT_REVIEW_REPORT_TITLE } from "./constants";
-import type { FormatReviewReportOptions } from "./types";
+import type { FormatReviewReportOptions, SpecialistFailureLike } from "./types";
 
 export function formatReviewReportMarkdown(options: FormatReviewReportOptions): string {
   const title = options.title ?? DEFAULT_REVIEW_REPORT_TITLE;
-  const lines = [
+  const failures = options.failures ?? [];
+
+  const headerLines = [
     `# ${title}`,
     "",
     `Findings: ${options.report.findings.length}`,
@@ -13,11 +15,30 @@ export function formatReviewReportMarkdown(options: FormatReviewReportOptions): 
     "",
   ];
 
+  const bodySections: string[] = [];
+
   if (options.report.findings.length === 0) {
-    return [...lines, DEFAULT_EMPTY_REVIEW_MESSAGE, ""].join("\n");
+    bodySections.push(DEFAULT_EMPTY_REVIEW_MESSAGE);
+  } else {
+    bodySections.push(...options.report.findings.map(formatFindingMarkdown));
   }
 
-  return [...lines, ...options.report.findings.map(formatFindingMarkdown)].join("\n\n");
+  if (failures.length > 0) {
+    bodySections.push(formatFailuresMarkdown(failures));
+  }
+
+  return [...headerLines, bodySections.join("\n\n"), ""].join("\n");
+}
+
+function formatFailuresMarkdown(failures: readonly SpecialistFailureLike[]): string {
+  const lines = ["## Specialists that failed", ""];
+
+  for (const failure of failures) {
+    const attemptLabel = failure.attempts === 1 ? "1 attempt" : `${failure.attempts} attempts`;
+    lines.push(`- **${failure.agent.name}** — failed after ${attemptLabel}. Last error: \`${failure.error}\`.`);
+  }
+
+  return lines.join("\n");
 }
 
 export function formatFindingMarkdown(finding: ReviewFinding): string {

@@ -38,7 +38,10 @@ const DEFAULT_MAX_TOKENS = 4096;
  * @internal Test-only injection seam for the Anthropic SDK boundary. Not part of the public API.
  */
 export type AnthropicMessagesGateway = {
-  messagesCreate(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
+  messagesCreate(
+    params: Anthropic.MessageCreateParamsNonStreaming,
+    options?: { signal?: AbortSignal },
+  ): Promise<Anthropic.Message>;
 };
 
 export type AnthropicProviderClientOptions = {
@@ -58,12 +61,15 @@ export function createAnthropicProviderClient(options: AnthropicProviderClientOp
     kind: "anthropic",
     async generateText(request: ProviderGenerateTextRequest): Promise<ProviderGenerateTextResult> {
       const split = splitProviderMessages(request.messages);
-      const response = await gateway.messagesCreate({
-        model: request.model,
-        max_tokens: maxTokens,
-        ...(split.system === undefined ? {} : { system: split.system }),
-        messages: split.messages,
-      });
+      const response = await gateway.messagesCreate(
+        {
+          model: request.model,
+          max_tokens: maxTokens,
+          ...(split.system === undefined ? {} : { system: split.system }),
+          messages: split.messages,
+        },
+        request.signal === undefined ? undefined : { signal: request.signal },
+      );
       const text = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === "text")
         .map((block) => block.text)
@@ -80,20 +86,23 @@ export function createAnthropicProviderClient(options: AnthropicProviderClientOp
 
     async generateObject(request: ProviderGenerateObjectRequest): Promise<ProviderGenerateObjectResult> {
       const split = splitProviderMessages(request.messages);
-      const response = await gateway.messagesCreate({
-        model: request.model,
-        max_tokens: maxTokens,
-        ...(split.system === undefined ? {} : { system: split.system }),
-        messages: split.messages,
-        tools: [
-          {
-            name: request.schemaName,
-            description: `Return data matching the ${request.schemaName} schema.`,
-            input_schema: request.schema,
-          },
-        ],
-        tool_choice: { type: "tool", name: request.schemaName },
-      });
+      const response = await gateway.messagesCreate(
+        {
+          model: request.model,
+          max_tokens: maxTokens,
+          ...(split.system === undefined ? {} : { system: split.system }),
+          messages: split.messages,
+          tools: [
+            {
+              name: request.schemaName,
+              description: `Return data matching the ${request.schemaName} schema.`,
+              input_schema: request.schema,
+            },
+          ],
+          tool_choice: { type: "tool", name: request.schemaName },
+        },
+        request.signal === undefined ? undefined : { signal: request.signal },
+      );
       const toolUseBlock = response.content.find((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
 
       if (toolUseBlock === undefined) {
@@ -116,8 +125,8 @@ function createDefaultGateway(apiKey: string): AnthropicMessagesGateway {
   const client = new Anthropic({ apiKey });
 
   return {
-    messagesCreate(params) {
-      return client.messages.create(params);
+    messagesCreate(params, options) {
+      return client.messages.create(params, options);
     },
   };
 }

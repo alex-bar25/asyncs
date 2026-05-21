@@ -28,6 +28,7 @@ export async function runCoordinatorAgent(options: RunCoordinatorAgentOptions): 
     schemaName: COORDINATOR_AGENT_OUTPUT_SCHEMA_NAME,
     schema: CoordinatorAgentOutputJsonSchema,
     messages: buildCoordinatorAgentMessages(options.input),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
   const parsed = CoordinatorAgentOutputSchema.parse(result.object);
 
@@ -48,6 +49,7 @@ export async function runSpecialistAgent(options: RunSpecialistAgentOptions): Pr
     schemaName: SPECIALIST_AGENT_OUTPUT_SCHEMA_NAME,
     schema: SpecialistAgentOutputJsonSchema,
     messages: buildSpecialistAgentMessages(options),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
   const parsed = SpecialistAgentOutputSchema.parse(result.object);
 

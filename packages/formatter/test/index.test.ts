@@ -7,6 +7,7 @@ import {
   formatFindingMarkdown,
   formatReviewReportMarkdown,
 } from "../src/index";
+import type { SpecialistFailureLike } from "../src/index";
 
 const finding: ReviewFinding = {
   agent: "backend",
@@ -72,5 +73,62 @@ describe("review formatter", () => {
     expect(markdown).toContain("Deduplicated findings: 1");
     expect(markdown).toContain("Suppressed noisy findings: 2");
     expect(markdown).toContain("### Backend - Retry path needs idempotency evidence");
+  });
+
+  test("formats a consensus report with no failures (no section rendered)", () => {
+    const report: ConsensusReport = {
+      findings: [finding],
+      duplicateCount: 0,
+      suppressedCount: 0,
+    };
+
+    const markdown = formatReviewReportMarkdown({
+      report,
+      failures: [],
+    });
+
+    expect(markdown).not.toContain("Specialists that failed");
+  });
+
+  test("renders a Specialists that failed section when failures are provided", () => {
+    const report: ConsensusReport = {
+      findings: [],
+      duplicateCount: 0,
+      suppressedCount: 0,
+    };
+
+    const failures: SpecialistFailureLike[] = [
+      {
+        agent: {
+          kind: "backend",
+          name: "Backend Agent",
+          purpose: "Review backend correctness.",
+        },
+        attempts: 3,
+        error: "Timed out after 60000ms",
+      },
+      {
+        agent: {
+          kind: "security",
+          name: "Security Agent",
+          purpose: "Review security risk.",
+        },
+        attempts: 1,
+        error: "401 Unauthorized",
+      },
+    ];
+
+    const markdown = formatReviewReportMarkdown({
+      report,
+      failures,
+    });
+
+    expect(markdown).toContain("## Specialists that failed");
+    expect(markdown).toContain("Backend Agent");
+    expect(markdown).toContain("3 attempt");
+    expect(markdown).toContain("Timed out after 60000ms");
+    expect(markdown).toContain("Security Agent");
+    expect(markdown).toContain("1 attempt");
+    expect(markdown).toContain("401 Unauthorized");
   });
 });

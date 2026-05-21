@@ -19,6 +19,7 @@ export type ProviderUsage = {
 export type ProviderGenerateTextRequest = {
   model: string;
   messages: readonly ProviderMessage[];
+  signal?: AbortSignal;
 };
 
 export type ProviderGenerateTextResult = {
@@ -36,6 +37,7 @@ export type ProviderGenerateObjectRequest = {
   schemaName: string;
   schema: ProviderJsonSchema;
   messages: readonly ProviderMessage[];
+  signal?: AbortSignal;
 };
 
 export type ProviderGenerateObjectResult = {

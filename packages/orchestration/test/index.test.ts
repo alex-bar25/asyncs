@@ -235,6 +235,138 @@ describe("review run planning", () => {
     expect(result.findings[0]?.title).toBe("Retry path needs idempotency evidence");
   });
 
+  test("partitions a failing specialist into failures with attempts", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["payments"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review payment retry correctness.",
+            files: ["services/payments/retry.ts"],
+            focusAreas: ["retry behavior"],
+            context: "Payment retry behavior changed.",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["Coordinator selected backend review."],
+      },
+    });
+
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 0,
+          patch: "@@ change",
+        },
+      ],
+      model: "specialist-test-model",
+      retryPolicy: { maxAttempts: 1, delaysMs: [] },
+      timeoutMs: 5_000,
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject() {
+          throw new Error("non-transient failure");
+        },
+      },
+    });
+
+    expect(result.runs).toHaveLength(0);
+    expect(result.findings).toHaveLength(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.agent.kind).toBe("backend");
+    expect(result.failures[0]?.attempts).toBe(1);
+    expect(result.failures[0]?.error).toContain("non-transient failure");
+  });
+
+  test("retries the coordinator on transient errors and succeeds on second attempt", async () => {
+    let calls = 0;
+
+    const plan = await createCoordinatedReviewRunPlan({
+      request: baseRequest,
+      coordinatorInput: {
+        files: [
+          {
+            path: "services/payments/retry.ts",
+            status: "modified",
+            additions: 1,
+            deletions: 0,
+          },
+        ],
+        availableAgents: ["backend"],
+        manifests: {},
+      },
+      coordinatorModel: "coordinator-test-model",
+      retryPolicy: { maxAttempts: 3, delaysMs: [1, 1] },
+      timeoutMs: 5_000,
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject() {
+          calls += 1;
+          if (calls === 1) {
+            const err: Error & { status?: number } = new Error("429");
+            err.status = 429;
+            throw err;
+          }
+          return {
+            object: {
+              labels: ["payments"],
+              assignments: [
+                {
+                  agent: "backend",
+                  purpose: "Review retry correctness.",
+                  files: ["services/payments/retry.ts"],
+                  focusAreas: ["retry behavior"],
+                  context: "Retry changed.",
+                },
+              ],
+              confidence: "high",
+              reasoning: ["Recovered after one transient failure."],
+            },
+          };
+        },
+      },
+    });
+
+    expect(calls).toBe(2);
+    expect(plan.routeSource).toBe("coordinator");
+    expect(plan.agents.map((agent) => agent.kind)).toEqual(["backend"]);
+  });
+
+  test("rethrows when the coordinator fails after retries are exhausted", async () => {
+    await expect(
+      createCoordinatedReviewRunPlan({
+        request: baseRequest,
+        coordinatorInput: { files: [], availableAgents: ["backend"], manifests: {} },
+        coordinatorModel: "coordinator-test-model",
+        retryPolicy: { maxAttempts: 2, delaysMs: [1] },
+        timeoutMs: 5_000,
+        provider: {
+          kind: "custom",
+          async generateText() {
+            return { text: "unused" };
+          },
+          async generateObject() {
+            const err: Error & { status?: number } = new Error("503");
+            err.status = 503;
+            throw err;
+          },
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
   test("runs a deterministic preview review pipeline", () => {
     const result = runPreviewReviewPipeline({ request: baseRequest });
 
@@ -246,5 +378,130 @@ describe("review run planning", () => {
     expect(result.report.suppressedCount).toBe(1);
     expect(result.markdown).toContain("# asyncs review preview");
     expect(result.markdown).toContain("### Backend - Preview finding: route smoke test");
+  });
+
+  test("respects the concurrency cap when running specialists", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["multi"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+          {
+            agent: "frontend",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+          {
+            agent: "security",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+          {
+            agent: "architecture",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["wide review"],
+      },
+    });
+
+    let inFlight = 0;
+    let observedMax = 0;
+
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [],
+      model: "specialist-test-model",
+      concurrency: 2,
+      timeoutMs: 5_000,
+      retryPolicy: { maxAttempts: 1, delaysMs: [] },
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject() {
+          inFlight += 1;
+          observedMax = Math.max(observedMax, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          inFlight -= 1;
+          return {
+            object: {
+              findings: [],
+              summary: "ok",
+            },
+          };
+        },
+      },
+    });
+
+    expect(observedMax).toBeLessThanOrEqual(2);
+    expect(observedMax).toBe(2);
+    expect(result.runs).toHaveLength(4);
+    expect(result.failures).toHaveLength(0);
+  });
+
+  test("classifies a timeout as transient and retries until exhaustion", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["payments"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["one specialist"],
+      },
+    });
+
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [],
+      model: "specialist-test-model",
+      concurrency: 1,
+      timeoutMs: 10,
+      retryPolicy: { maxAttempts: 2, delaysMs: [1] },
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject(request) {
+          return new Promise((_, reject) => {
+            request.signal?.addEventListener("abort", () => {
+              const error = new Error("aborted by signal");
+              error.name = "AbortError";
+              reject(error);
+            });
+          });
+        },
+      },
+    });
+
+    expect(result.runs).toHaveLength(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.attempts).toBe(2);
+    expect(result.failures[0]?.error).toContain("Timed out after 10ms");
   });
 });
