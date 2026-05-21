@@ -235,6 +235,58 @@ describe("review run planning", () => {
     expect(result.findings[0]?.title).toBe("Retry path needs idempotency evidence");
   });
 
+  test("partitions a failing specialist into failures with attempts", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["payments"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review payment retry correctness.",
+            files: ["services/payments/retry.ts"],
+            focusAreas: ["retry behavior"],
+            context: "Payment retry behavior changed.",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["Coordinator selected backend review."],
+      },
+    });
+
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [
+        {
+          path: "services/payments/retry.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 0,
+          patch: "@@ change",
+        },
+      ],
+      model: "specialist-test-model",
+      retryPolicy: { maxAttempts: 1, delaysMs: [] },
+      timeoutMs: 5_000,
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject() {
+          throw new Error("non-transient failure");
+        },
+      },
+    });
+
+    expect(result.runs).toHaveLength(0);
+    expect(result.findings).toHaveLength(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.agent.kind).toBe("backend");
+    expect(result.failures[0]?.attempts).toBe(1);
+    expect(result.failures[0]?.error).toContain("non-transient failure");
+  });
+
   test("runs a deterministic preview review pipeline", () => {
     const result = runPreviewReviewPipeline({ request: baseRequest });
 
