@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseNumstat } from "../src/parseDiff";
+import { parseNameStatus, parseNumstat } from "../src/parseDiff";
 
 describe("parseNumstat", () => {
   test("parses a single row with additions and deletions", () => {
@@ -31,5 +31,39 @@ describe("parseNumstat", () => {
 
   test("returns empty array on empty input", () => {
     expect(parseNumstat("")).toEqual([]);
+  });
+});
+
+describe("parseNameStatus", () => {
+  test("parses A/M/D status codes", () => {
+    const output = "A\tsrc/new.ts\nM\tsrc/changed.ts\nD\tsrc/gone.ts\n";
+
+    expect(parseNameStatus(output)).toEqual([
+      { status: "added", path: "src/new.ts" },
+      { status: "modified", path: "src/changed.ts" },
+      { status: "deleted", path: "src/gone.ts" },
+    ]);
+  });
+
+  test("parses R<score> as renamed with oldPath", () => {
+    expect(parseNameStatus("R100\tsrc/old.ts\tsrc/new.ts\n")).toEqual([
+      { status: "renamed", path: "src/new.ts", oldPath: "src/old.ts" },
+    ]);
+  });
+
+  test("tolerates trailing newline absence", () => {
+    expect(parseNameStatus("A\tsrc/new.ts")).toEqual([{ status: "added", path: "src/new.ts" }]);
+  });
+
+  test("ignores blank lines", () => {
+    expect(parseNameStatus("\nA\tsrc/new.ts\n\n")).toEqual([{ status: "added", path: "src/new.ts" }]);
+  });
+
+  test("returns empty array on empty input", () => {
+    expect(parseNameStatus("")).toEqual([]);
+  });
+
+  test("throws on unknown status code", () => {
+    expect(() => parseNameStatus("X\tsrc/weird.ts\n")).toThrow("unknown status");
   });
 });
