@@ -48,11 +48,25 @@ export function createReviewRunPlan(options: CreateReviewRunPlanOptions): Review
 export async function createCoordinatedReviewRunPlan(
   options: CreateCoordinatedReviewRunPlanOptions,
 ): Promise<ReviewRunPlan> {
-  const result = await runCoordinatorAgent({
-    input: options.coordinatorInput,
-    model: options.coordinatorModel,
-    provider: options.provider,
-  });
+  const timeoutMs = options.timeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
+  const retryPolicy = options.retryPolicy ?? DEFAULT_RETRY_POLICY;
+  const logger = options.logger ?? noopLogger;
+
+  const { value: result } = await withRetries(
+    () =>
+      withTimeout(
+        (signal) =>
+          runCoordinatorAgent({
+            input: options.coordinatorInput,
+            model: options.coordinatorModel,
+            provider: options.provider,
+            signal,
+          }),
+        timeoutMs,
+      ),
+    retryPolicy,
+    { logger, agentLabel: "coordinator" },
+  );
 
   return createReviewRunPlan({
     request: options.request,

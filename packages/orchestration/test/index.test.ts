@@ -287,6 +287,86 @@ describe("review run planning", () => {
     expect(result.failures[0]?.error).toContain("non-transient failure");
   });
 
+  test("retries the coordinator on transient errors and succeeds on second attempt", async () => {
+    let calls = 0;
+
+    const plan = await createCoordinatedReviewRunPlan({
+      request: baseRequest,
+      coordinatorInput: {
+        files: [
+          {
+            path: "services/payments/retry.ts",
+            status: "modified",
+            additions: 1,
+            deletions: 0,
+          },
+        ],
+        availableAgents: ["backend"],
+        manifests: {},
+      },
+      coordinatorModel: "coordinator-test-model",
+      retryPolicy: { maxAttempts: 3, delaysMs: [1, 1] },
+      timeoutMs: 5_000,
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject() {
+          calls += 1;
+          if (calls === 1) {
+            const err: Error & { status?: number } = new Error("429");
+            err.status = 429;
+            throw err;
+          }
+          return {
+            object: {
+              labels: ["payments"],
+              assignments: [
+                {
+                  agent: "backend",
+                  purpose: "Review retry correctness.",
+                  files: ["services/payments/retry.ts"],
+                  focusAreas: ["retry behavior"],
+                  context: "Retry changed.",
+                },
+              ],
+              confidence: "high",
+              reasoning: ["Recovered after one transient failure."],
+            },
+          };
+        },
+      },
+    });
+
+    expect(calls).toBe(2);
+    expect(plan.routeSource).toBe("coordinator");
+    expect(plan.agents.map((agent) => agent.kind)).toEqual(["backend"]);
+  });
+
+  test("rethrows when the coordinator fails after retries are exhausted", async () => {
+    await expect(
+      createCoordinatedReviewRunPlan({
+        request: baseRequest,
+        coordinatorInput: { files: [], availableAgents: ["backend"], manifests: {} },
+        coordinatorModel: "coordinator-test-model",
+        retryPolicy: { maxAttempts: 2, delaysMs: [1] },
+        timeoutMs: 5_000,
+        provider: {
+          kind: "custom",
+          async generateText() {
+            return { text: "unused" };
+          },
+          async generateObject() {
+            const err: Error & { status?: number } = new Error("503");
+            err.status = 503;
+            throw err;
+          },
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
   test("runs a deterministic preview review pipeline", () => {
     const result = runPreviewReviewPipeline({ request: baseRequest });
 
