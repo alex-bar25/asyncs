@@ -253,6 +253,36 @@ describe("coordinator agent contract", () => {
     expect(result.usage?.outputTokens).toBe(20);
   });
 
+  test("runCoordinatorAgent forwards signal to the provider", async () => {
+    const controller = new AbortController();
+    let capturedSignal: AbortSignal | undefined;
+
+    await runCoordinatorAgent({
+      input: buildCoordinatorAgentInput({ files: [] }),
+      model: "coordinator-test-model",
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject(request) {
+          capturedSignal = request.signal;
+          return {
+            object: {
+              labels: [],
+              assignments: [],
+              confidence: "low",
+              reasoning: ["empty input"],
+            },
+          };
+        },
+      },
+      signal: controller.signal,
+    });
+
+    expect(capturedSignal).toBe(controller.signal);
+  });
+
   test("fails clearly when the provider cannot generate structured output", async () => {
     const input = buildCoordinatorAgentInput({
       files: [],

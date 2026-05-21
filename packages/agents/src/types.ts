@@ -48,6 +48,7 @@ export type RunCoordinatorAgentOptions = {
   input: CoordinatorAgentInput;
   model: string;
   provider: ProviderClient;
+  signal?: AbortSignal;
 };
 
 export type CoordinatorAgentRunResult = {
@@ -72,6 +73,7 @@ export type SpecialistAgentOutput = {
 export type RunSpecialistAgentOptions = SpecialistAgentInput & {
   model: string;
   provider: ProviderClient;
+  signal?: AbortSignal;
 };
 
 export type SpecialistAgentRunResult = {
