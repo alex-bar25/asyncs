@@ -123,6 +123,7 @@ describe("createAnthropicProviderClient.generateObject", () => {
         ],
         tool_choice: { type: "tool", name: "CoordinatorAgentOutput" },
       }),
+      undefined,
     ]);
   });
 
@@ -187,6 +188,31 @@ describe("createAnthropicProviderClient.generateText", () => {
         system: "Be terse.",
         messages: [{ role: "user", content: "Hi." }],
       },
+      undefined,
     ]);
+  });
+
+  test("forwards AbortSignal to messagesCreate via options", async () => {
+    const controller = new AbortController();
+    const messagesCreate = mock<
+      (
+        params: Anthropic.MessageCreateParamsNonStreaming,
+        options?: { signal?: AbortSignal },
+      ) => Promise<Anthropic.Message>
+    >(async () => fakeAnthropicMessage([{ type: "text", text: "ok", citations: null }], { input: 1, output: 1 }));
+
+    const client = createAnthropicProviderClient({
+      apiKey: "test-key",
+      gateway: { messagesCreate },
+    });
+
+    await client.generateText({
+      model: "claude-3-7-sonnet-20250219",
+      messages: [{ role: "user", content: "Hi." }],
+      signal: controller.signal,
+    });
+
+    const optionsArg: unknown = messagesCreate.mock.calls[0]?.[1];
+    expect(optionsArg).toEqual({ signal: controller.signal });
   });
 });
