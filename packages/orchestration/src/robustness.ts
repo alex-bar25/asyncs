@@ -1,3 +1,43 @@
+export class RetryExhaustedError extends Error {
+  constructor(
+    override readonly cause: unknown,
+    readonly attempts: number,
+  ) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "RetryExhaustedError";
+  }
+}
+
+const TRANSIENT_CODES: ReadonlySet<string> = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+]);
+
+export function isTransientError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) {
+    return false;
+  }
+
+  if ("name" in err && (err.name === "TimeoutError" || err.name === "AbortError")) {
+    return true;
+  }
+
+  if ("status" in err && typeof err.status === "number") {
+    if (err.status === 429) return true;
+    if (err.status >= 500 && err.status < 600) return true;
+  }
+
+  if ("code" in err && typeof err.code === "string" && TRANSIENT_CODES.has(err.code)) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
