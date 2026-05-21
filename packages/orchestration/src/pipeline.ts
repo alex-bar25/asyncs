@@ -78,13 +78,14 @@ export async function executeSpecialistAssignments(
         provider: options.provider,
       });
 
-      return { agent, ...run };
+      return { agent, attempts: 1, ...run };
     }),
   );
 
   return {
     runs,
     findings: runs.flatMap((run) => [...run.output.findings]),
+    failures: [],
   };
 }
 

@@ -12,6 +12,7 @@
     "@asyncs/core": "workspace:*",
     "@asyncs/formatter": "workspace:*",
     "@asyncs/providers": "workspace:*",
-    "@asyncs/routing": "workspace:*"
+    "@asyncs/routing": "workspace:*",
+    "p-queue": "^9.3.0"
   }
 }
