@@ -142,3 +142,15 @@ export function splitMultiFilePatch(output: string): Map<string, string> {
 
   return files;
 }
+
+export function synthesizeUntrackedPatch(content: string): string {
+  if (content.length === 0) {
+    return "@@ -0,0 +0,0 @@";
+  }
+
+  const trimmed = content.endsWith("\n") ? content.slice(0, -1) : content;
+  const lines = trimmed.split("\n");
+  const prefixed = lines.map((line) => `+${line}`);
+
+  return [`@@ -0,0 +1,${lines.length} @@`, ...prefixed].join("\n");
+}

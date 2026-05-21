@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseNameStatus, parseNumstat, splitMultiFilePatch } from "../src/parseDiff";
+import { parseNameStatus, parseNumstat, splitMultiFilePatch, synthesizeUntrackedPatch } from "../src/parseDiff";
 
 describe("parseNumstat", () => {
   test("parses a single row with additions and deletions", () => {
@@ -128,5 +128,37 @@ describe("splitMultiFilePatch", () => {
 
     expect(result.has("src/new.ts")).toBe(true);
     expect(result.has("src/old.ts")).toBe(false);
+  });
+});
+
+describe("synthesizeUntrackedPatch", () => {
+  test("renders a single-line file as a +1 hunk", () => {
+    const patch = synthesizeUntrackedPatch("hello\n");
+
+    expect(patch).toContain("@@ -0,0 +1,1 @@");
+    expect(patch).toContain("+hello");
+  });
+
+  test("renders a multi-line file with one + line per content line", () => {
+    const patch = synthesizeUntrackedPatch("a\nb\nc\n");
+
+    expect(patch).toContain("@@ -0,0 +1,3 @@");
+    expect(patch).toContain("+a");
+    expect(patch).toContain("+b");
+    expect(patch).toContain("+c");
+  });
+
+  test("returns a zero-line header on empty content", () => {
+    const patch = synthesizeUntrackedPatch("");
+
+    expect(patch).toContain("@@ -0,0 +0,0 @@");
+  });
+
+  test("preserves a trailing line without a final newline", () => {
+    const patch = synthesizeUntrackedPatch("a\nb");
+
+    expect(patch).toContain("@@ -0,0 +1,2 @@");
+    expect(patch).toContain("+a");
+    expect(patch).toContain("+b");
   });
 });
