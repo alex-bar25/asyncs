@@ -1,6 +1,7 @@
 import { loadCommitRangeDiff } from "./commitRange";
 import { createDefaultGateway } from "./simpleGitGateway";
 import { loadStagedDiff } from "./staged";
+import { loadWorkingTreeDiff } from "./workingTree";
 import type { LoadLocalDiffOptions, LocalDiffResult } from "./types";
 
 export async function loadLocalDiff(options: LoadLocalDiffOptions): Promise<LocalDiffResult> {
@@ -8,11 +9,13 @@ export async function loadLocalDiff(options: LoadLocalDiffOptions): Promise<Loca
   const gateway = createDefaultGateway(cwd);
 
   switch (options.mode.kind) {
+    case "workingTree": {
+      const workingTreeOptions = options.mode.baseRef !== undefined ? { baseRef: options.mode.baseRef } : {};
+      return loadWorkingTreeDiff(gateway, workingTreeOptions);
+    }
     case "staged":
       return loadStagedDiff(gateway);
     case "commitRange":
       return loadCommitRangeDiff(gateway, { from: options.mode.from, to: options.mode.to });
-    case "workingTree":
-      throw new Error(`loadLocalDiff: mode "${options.mode.kind}" not implemented yet`);
   }
 }

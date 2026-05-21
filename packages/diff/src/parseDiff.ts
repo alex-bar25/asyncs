@@ -17,11 +17,15 @@ export function parseNumstat(output: string): NumstatRow[] {
     }
 
     const [addedField, deletedField, ...rest] = line.split("\t");
-    const path = rest.join("\t");
+    const rawPath = rest.join("\t");
 
-    if (addedField === undefined || deletedField === undefined || path.length === 0) {
+    if (addedField === undefined || deletedField === undefined || rawPath.length === 0) {
       throw new Error(`parseNumstat: malformed numstat line: ${rawLine}`);
     }
+
+    // git numstat uses "oldPath => newPath" for renames; normalise to the new path
+    const renameArrow = rawPath.indexOf(" => ");
+    const path = renameArrow !== -1 ? rawPath.slice(renameArrow + 4) : rawPath;
 
     if (addedField === "-" && deletedField === "-") {
       rows.push({ path, additions: "binary", deletions: "binary" });
