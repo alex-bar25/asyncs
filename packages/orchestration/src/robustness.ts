@@ -1,3 +1,5 @@
+import type { Logger } from "@asyncs/core";
+
 export class RetryExhaustedError extends Error {
   constructor(
     override readonly cause: unknown,
@@ -36,6 +38,62 @@ export function isTransientError(err: unknown): boolean {
   }
 
   return false;
+}
+
+export type RetryPolicy = {
+  maxAttempts: number;
+  delaysMs: readonly number[];
+};
+
+export type WithRetriesOptions = {
+  logger: Logger;
+  agentLabel: string;
+  isTransient?: (err: unknown) => boolean;
+};
+
+export async function withRetries<T>(
+  fn: () => Promise<T>,
+  policy: RetryPolicy,
+  options: WithRetriesOptions,
+): Promise<{ value: T; attempts: number }> {
+  const classify = options.isTransient ?? isTransientError;
+  let attempt = 0;
+  let lastError: unknown = undefined;
+
+  while (attempt < policy.maxAttempts) {
+    attempt += 1;
+
+    try {
+      const value = await fn();
+      return { value, attempts: attempt };
+    } catch (err) {
+      lastError = err;
+      const canRetry = attempt < policy.maxAttempts && classify(err);
+
+      if (!canRetry) {
+        break;
+      }
+
+      const nextDelayMs = policy.delaysMs[attempt - 1] ?? policy.delaysMs[policy.delaysMs.length - 1] ?? 0;
+
+      options.logger.warn(`${options.agentLabel} attempt ${attempt} failed; retrying`, {
+        agentLabel: options.agentLabel,
+        attempt,
+        nextDelayMs,
+        error: err instanceof Error ? err.message : String(err),
+      });
+
+      await delay(nextDelayMs);
+    }
+  }
+
+  throw new RetryExhaustedError(lastError, attempt);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 export async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
