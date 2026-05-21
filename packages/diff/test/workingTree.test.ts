@@ -93,3 +93,64 @@ describe("loadLocalDiff workingTree mode (tracked changes)", () => {
     expect(result.files).toHaveLength(1);
   });
 });
+
+describe("loadLocalDiff workingTree mode (untracked + binary)", () => {
+  let repo: TestRepo;
+
+  beforeEach(async () => {
+    repo = await createTestRepo();
+    await repo.write("a.txt", "first\n");
+    await repo.git.add(["."]);
+    await repo.git.commit("initial");
+  });
+
+  afterEach(async () => {
+    await repo.cleanup();
+  });
+
+  test("includes untracked text files as added with synthesized patch", async () => {
+    await repo.git.checkoutLocalBranch("feature");
+    await repo.write("untracked.txt", "hello\nworld\n");
+
+    const result = await loadLocalDiff({
+      mode: { kind: "workingTree" },
+      cwd: repo.cwd,
+    });
+
+    const untracked = result.files.find((file) => file.path === "untracked.txt");
+    expect(untracked?.status).toBe("added");
+    expect(untracked?.additions).toBe(2);
+    expect(untracked?.deletions).toBe(0);
+    expect(untracked?.patch).toContain("@@ -0,0 +1,2 @@");
+    expect(untracked?.patch).toContain("+hello");
+    expect(untracked?.patch).toContain("+world");
+  });
+
+  test("skips untracked binary files via null-byte heuristic", async () => {
+    await repo.git.checkoutLocalBranch("feature");
+    await repo.write("logo.bin", "abc\x00\x00binary-content\n");
+
+    const result = await loadLocalDiff({
+      mode: { kind: "workingTree" },
+      cwd: repo.cwd,
+    });
+
+    expect(result.files.find((file) => file.path === "logo.bin")).toBeUndefined();
+    expect(result.skippedBinaries).toContain("logo.bin");
+  });
+
+  test("skips tracked binary files surfaced by git numstat", async () => {
+    await repo.git.checkoutLocalBranch("feature");
+    await repo.write("blob.bin", "\x00binary-content\n");
+    await repo.git.add(["blob.bin"]);
+    await repo.git.commit("add binary");
+
+    const result = await loadLocalDiff({
+      mode: { kind: "workingTree" },
+      cwd: repo.cwd,
+    });
+
+    expect(result.files.find((file) => file.path === "blob.bin")).toBeUndefined();
+    expect(result.skippedBinaries).toContain("blob.bin");
+  });
+});
