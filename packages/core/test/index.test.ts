@@ -12,7 +12,9 @@ import {
   isAgentKind,
   isReviewMode,
   isSeverity,
+  noopLogger,
   type AgentDefinition,
+  type Logger,
   type ReviewRequest,
   type ReviewFinding,
   type ReviewReport,
@@ -97,5 +99,15 @@ describe("core metadata", () => {
 
     expect(request.agents).toEqual(["backend", "security"]);
     expect(request.dryRun).toBe(true);
+  });
+
+  test("noopLogger exposes Logger interface methods that do not throw", () => {
+    expect(() => noopLogger.debug("debug", { x: 1 })).not.toThrow();
+    expect(() => noopLogger.info("info")).not.toThrow();
+    expect(() => noopLogger.warn("warn", { agent: "backend" })).not.toThrow();
+    expect(() => noopLogger.error("error")).not.toThrow();
+
+    const logger: Logger = noopLogger;
+    expect(typeof logger.debug).toBe("function");
   });
 });
