@@ -98,3 +98,47 @@ export function parseNameStatus(output: string): NameStatusRow[] {
 
   return rows;
 }
+
+const FILE_HEADER_REGEX = /^diff --git a\/(.+?) b\/(.+)$/;
+
+export function splitMultiFilePatch(output: string): Map<string, string> {
+  const files = new Map<string, string>();
+
+  if (output.length === 0) {
+    return files;
+  }
+
+  const lines = output.split("\n");
+  let currentPath: string | undefined = undefined;
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    const header = FILE_HEADER_REGEX.exec(line);
+
+    if (header !== null) {
+      if (currentPath !== undefined) {
+        files.set(currentPath, currentLines.join("\n"));
+      }
+
+      const newPath = header[2];
+
+      if (newPath === undefined) {
+        throw new Error(`splitMultiFilePatch: malformed file header: ${line}`);
+      }
+
+      currentPath = newPath;
+      currentLines = [line];
+      continue;
+    }
+
+    if (currentPath !== undefined) {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentPath !== undefined) {
+    files.set(currentPath, currentLines.join("\n"));
+  }
+
+  return files;
+}
