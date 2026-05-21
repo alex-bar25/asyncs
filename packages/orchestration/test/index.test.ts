@@ -451,6 +451,7 @@ describe("review run planning", () => {
     });
 
     expect(observedMax).toBeLessThanOrEqual(2);
+    expect(observedMax).toBe(2);
     expect(result.runs).toHaveLength(4);
     expect(result.failures).toHaveLength(0);
   });
