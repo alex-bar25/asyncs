@@ -379,4 +379,128 @@ describe("review run planning", () => {
     expect(result.markdown).toContain("# asyncs review preview");
     expect(result.markdown).toContain("### Backend - Preview finding: route smoke test");
   });
+
+  test("respects the concurrency cap when running specialists", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["multi"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+          {
+            agent: "frontend",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+          {
+            agent: "security",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+          {
+            agent: "architecture",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["wide review"],
+      },
+    });
+
+    let inFlight = 0;
+    let observedMax = 0;
+
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [],
+      model: "specialist-test-model",
+      concurrency: 2,
+      timeoutMs: 5_000,
+      retryPolicy: { maxAttempts: 1, delaysMs: [] },
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject() {
+          inFlight += 1;
+          observedMax = Math.max(observedMax, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          inFlight -= 1;
+          return {
+            object: {
+              findings: [],
+              summary: "ok",
+            },
+          };
+        },
+      },
+    });
+
+    expect(observedMax).toBeLessThanOrEqual(2);
+    expect(result.runs).toHaveLength(4);
+    expect(result.failures).toHaveLength(0);
+  });
+
+  test("classifies a timeout as transient and retries until exhaustion", async () => {
+    const plan = createReviewRunPlan({
+      request: baseRequest,
+      coordinatorOutput: {
+        labels: ["payments"],
+        assignments: [
+          {
+            agent: "backend",
+            purpose: "Review.",
+            files: [],
+            focusAreas: [],
+            context: "",
+          },
+        ],
+        confidence: "high",
+        reasoning: ["one specialist"],
+      },
+    });
+
+    const result = await executeSpecialistAssignments({
+      plan,
+      files: [],
+      model: "specialist-test-model",
+      concurrency: 1,
+      timeoutMs: 10,
+      retryPolicy: { maxAttempts: 2, delaysMs: [1] },
+      provider: {
+        kind: "custom",
+        async generateText() {
+          return { text: "unused" };
+        },
+        async generateObject(request) {
+          return new Promise((_, reject) => {
+            request.signal?.addEventListener("abort", () => {
+              const error = new Error("aborted by signal");
+              error.name = "AbortError";
+              reject(error);
+            });
+          });
+        },
+      },
+    });
+
+    expect(result.runs).toHaveLength(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.attempts).toBe(2);
+    expect(result.failures[0]?.error).toContain("Timed out after 10ms");
+  });
 });
