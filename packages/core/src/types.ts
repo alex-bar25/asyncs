@@ -30,6 +30,7 @@ export type ChangedFile = {
   additions: number;
   deletions: number;
   patch?: string;
+  oldPath?: string;
 };
 
 export type ReviewRequest = {
