@@ -1,5 +1,6 @@
 import type { ChangedFile } from "@asyncs/core";
 import { parseNameStatus, parseNumstat, splitMultiFilePatch, synthesizeUntrackedPatch } from "./parseDiff";
+import { partitionFiles } from "./partition";
 import type { SimpleGitGateway } from "./simpleGitGateway";
 import type { LocalDiffResult } from "./types";
 
@@ -19,44 +20,22 @@ export async function loadWorkingTreeDiff(
   const nameStatusRaw = await gateway.diffNameStatus([baseRef, "-M"]);
   const patchRaw = await gateway.diffPatch([baseRef, "-M"], "");
 
-  const numstat = parseNumstat(numstatRaw);
-  const nameStatus = parseNameStatus(nameStatusRaw);
-  const patches = splitMultiFilePatch(patchRaw);
+  const { files, skippedBinaries } = partitionFiles(
+    parseNumstat(numstatRaw),
+    parseNameStatus(nameStatusRaw),
+    splitMultiFilePatch(patchRaw),
+  );
 
-  const files: ChangedFile[] = [];
-  const skippedBinaries: string[] = [];
+  await appendUntrackedFiles(gateway, files, skippedBinaries);
 
-  for (const row of nameStatus) {
-    const stats = numstat.find((n) => n.path === row.path);
+  return { baseRef, headRef: "WORKING_TREE", files, skippedBinaries };
+}
 
-    if (stats === undefined) {
-      continue;
-    }
-
-    if (stats.additions === "binary" || stats.deletions === "binary") {
-      skippedBinaries.push(row.path);
-      continue;
-    }
-
-    const file: ChangedFile = {
-      path: row.path,
-      status: row.status,
-      additions: stats.additions,
-      deletions: stats.deletions,
-    };
-
-    const patch = patches.get(row.path);
-    if (patch !== undefined) {
-      file.patch = patch;
-    }
-
-    if (row.oldPath !== undefined) {
-      file.oldPath = row.oldPath;
-    }
-
-    files.push(file);
-  }
-
+async function appendUntrackedFiles(
+  gateway: SimpleGitGateway,
+  files: ChangedFile[],
+  skippedBinaries: string[],
+): Promise<void> {
   const untracked = await gateway.listUntracked();
 
   for (const path of untracked) {
@@ -75,18 +54,14 @@ export async function loadWorkingTreeDiff(
       continue;
     }
 
-    const additions = countAddedLines(content);
-
     files.push({
       path,
       status: "added",
-      additions,
+      additions: countAddedLines(content),
       deletions: 0,
       patch: synthesizeUntrackedPatch(content),
     });
   }
-
-  return { baseRef, headRef: "WORKING_TREE", files, skippedBinaries };
 }
 
 function isLikelyBinary(content: string): boolean {

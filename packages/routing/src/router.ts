@@ -7,7 +7,6 @@ export function resolveAgentRoute(request: ReviewRequest): AgentRoute {
   const requestedAgentKinds = request.agents.length > 0 ? request.agents : AUTO_AGENT_KINDS_BY_MODE[request.mode];
 
   return {
-    request,
     source: request.agents.length > 0 ? "explicit" : "auto",
     agents: resolveBuiltInAgentDefinitions(requestedAgentKinds),
   };
