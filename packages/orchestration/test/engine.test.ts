@@ -87,4 +87,49 @@ describe("runReviewPipeline", () => {
     expect(result.markdown).toContain("# asyncs review");
     expect(result.markdown).toContain("### Backend - Retry path lacks idempotency");
   });
+
+  test("maps request.agents into the coordinator's available agents", async () => {
+    let coordinatorPrompt = "";
+
+    const provider: ProviderClient = {
+      kind: "custom",
+      async generateText() {
+        return { text: "unused" };
+      },
+      async generateObject(request: ProviderGenerateObjectRequest) {
+        if (request.schemaName === "CoordinatorAgentOutput") {
+          coordinatorPrompt = request.messages.map((message) => message.content).join("\n");
+          return {
+            object: {
+              labels: ["security"],
+              assignments: [
+                {
+                  agent: "security",
+                  purpose: "Review auth changes.",
+                  files: ["src/payments/retry.ts"],
+                  focusAreas: ["authorization"],
+                  context: "Security-sensitive change.",
+                },
+              ],
+              confidence: "high",
+              reasoning: ["Security-only review requested."],
+            },
+          };
+        }
+
+        return { object: { findings: [], summary: "No issues." } };
+      },
+    };
+
+    await runReviewPipeline({
+      request: { ...baseRequest, agents: ["security"] },
+      files: changedFiles,
+      provider,
+      model: "test-model",
+    });
+
+    expect(coordinatorPrompt).toContain("(security):");
+    expect(coordinatorPrompt).not.toContain("(backend):");
+    expect(coordinatorPrompt).not.toContain("(frontend):");
+  });
 });
