@@ -132,4 +132,56 @@ describe("runReviewPipeline", () => {
     expect(coordinatorPrompt).not.toContain("(backend):");
     expect(coordinatorPrompt).not.toContain("(frontend):");
   });
+
+  test("returns a review with a failures section when every specialist fails", async () => {
+    const provider: ProviderClient = {
+      kind: "custom",
+      async generateText() {
+        return { text: "unused" };
+      },
+      async generateObject(request: ProviderGenerateObjectRequest) {
+        if (request.schemaName === "CoordinatorAgentOutput") {
+          return {
+            object: {
+              labels: ["payments"],
+              assignments: [
+                {
+                  agent: "backend",
+                  purpose: "Review retry correctness.",
+                  files: ["src/payments/retry.ts"],
+                  focusAreas: ["retry behavior"],
+                  context: "Payment retry behavior changed.",
+                },
+                {
+                  agent: "security",
+                  purpose: "Review duplicate-charge risk.",
+                  files: ["src/payments/retry.ts"],
+                  focusAreas: ["duplicate charge"],
+                  context: "Retries can double-charge.",
+                },
+              ],
+              confidence: "high",
+              reasoning: ["Two specialists assigned."],
+            },
+          };
+        }
+
+        throw new Error("specialist provider exploded");
+      },
+    };
+
+    const result = await runReviewPipeline({
+      request: baseRequest,
+      files: changedFiles,
+      provider,
+      model: "test-model",
+      retryPolicy: { maxAttempts: 1, delaysMs: [] },
+    });
+
+    expect(result.failures).toHaveLength(2);
+    expect(result.failures.map((failure) => failure.agent.kind).sort()).toEqual(["backend", "security"]);
+    expect(result.report.findings).toHaveLength(0);
+    expect(result.markdown).toContain("## Specialists that failed");
+    expect(result.markdown).toContain("No actionable findings after consensus filtering.");
+  });
 });

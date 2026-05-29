@@ -27,7 +27,7 @@ export async function runReviewPipeline(options: RunReviewPipelineOptions): Prom
     ...sharedRobustness,
   });
 
-  const { findings } = await executeSpecialistAssignments({
+  const { findings, failures } = await executeSpecialistAssignments({
     plan,
     files: options.files,
     model: options.model,
@@ -41,7 +41,7 @@ export async function runReviewPipeline(options: RunReviewPipelineOptions): Prom
   return {
     plan,
     report,
-    markdown: formatReviewReportMarkdown({ report, title: REVIEW_TITLE }),
-    failures: [],
+    markdown: formatReviewReportMarkdown({ report, title: REVIEW_TITLE, failures }),
+    failures,
   };
 }
