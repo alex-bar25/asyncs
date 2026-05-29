@@ -1,0 +1,15 @@
+{
+  "name": "@asyncs/action",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "bun run src/smoke.ts"
+  },
+  "dependencies": {
+    "@asyncs/core": "workspace:*",
+    "@asyncs/diff": "workspace:*",
+    "@asyncs/orchestration": "workspace:*",
+    "@asyncs/providers": "workspace:*"
+  }
+}
