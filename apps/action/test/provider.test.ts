@@ -8,14 +8,19 @@ const savedEnv = new Map<string, string | undefined>();
 function clearEnv(): void {
   for (const key of ENV_KEYS) {
     savedEnv.set(key, process.env[key]);
-    process.env[key] = undefined;
+    Reflect.deleteProperty(process.env, key);
   }
 }
 
 afterEach(() => {
   for (const key of ENV_KEYS) {
     const original = savedEnv.get(key);
-    process.env[key] = original;
+
+    if (original === undefined) {
+      Reflect.deleteProperty(process.env, key);
+    } else {
+      process.env[key] = original;
+    }
   }
 
   savedEnv.clear();
