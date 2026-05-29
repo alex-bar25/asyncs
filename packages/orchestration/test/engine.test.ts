@@ -184,4 +184,34 @@ describe("runReviewPipeline", () => {
     expect(result.markdown).toContain("## Specialists that failed");
     expect(result.markdown).toContain("No actionable findings after consensus filtering.");
   });
+
+  test("short-circuits on empty files without calling the provider", async () => {
+    let providerCalled = false;
+
+    const provider: ProviderClient = {
+      kind: "custom",
+      async generateText() {
+        providerCalled = true;
+        return { text: "unused" };
+      },
+      async generateObject() {
+        providerCalled = true;
+        return { object: {} };
+      },
+    };
+
+    const result = await runReviewPipeline({
+      request: baseRequest,
+      files: [],
+      provider,
+      model: "test-model",
+    });
+
+    expect(providerCalled).toBe(false);
+    expect(result.plan.routeSource).toBe("auto");
+    expect(result.report.findings).toHaveLength(0);
+    expect(result.failures).toHaveLength(0);
+    expect(result.markdown).toContain("# asyncs review");
+    expect(result.markdown).toContain("No actionable findings after consensus filtering.");
+  });
 });
