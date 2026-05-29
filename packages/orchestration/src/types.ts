@@ -44,6 +44,21 @@ export type ExecuteSpecialistAssignmentsOptions = {
   provider: ProviderClient;
 } & RobustnessOptions;
 
+export type RunReviewPipelineOptions = {
+  request: ReviewRequest;
+  files: readonly ChangedFile[];
+  provider: ProviderClient;
+  model: string;
+  repository?: string;
+} & RobustnessOptions;
+
+export type ReviewPipelineResult = {
+  plan: ReviewRunPlan;
+  report: ConsensusReport;
+  markdown: string;
+  failures: SpecialistFailure[];
+};
+
 export type RunPreviewReviewPipelineOptions = {
   request: ReviewRequest;
 };
