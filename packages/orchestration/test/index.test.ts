@@ -5,7 +5,6 @@ import {
   createCoordinatedReviewRunPlan,
   createReviewRunPlan,
   executeSpecialistAssignments,
-  runPreviewReviewPipeline,
   type ReviewRunPlan,
 } from "../src/index";
 
@@ -365,19 +364,6 @@ describe("review run planning", () => {
         },
       }),
     ).rejects.toThrow();
-  });
-
-  test("runs a deterministic preview review pipeline", () => {
-    const result = runPreviewReviewPipeline({ request: baseRequest });
-
-    expect(result.plan.routeSource).toBe("auto");
-    expect(result.plan.agents.map((agent) => agent.kind)).toEqual(["backend", "security", "architecture", "testing"]);
-    expect(result.files.map((file) => file.path)).toEqual(["preview/request.ts"]);
-    expect(result.report.findings).toHaveLength(1);
-    expect(result.report.duplicateCount).toBe(1);
-    expect(result.report.suppressedCount).toBe(1);
-    expect(result.markdown).toContain("# asyncs review preview");
-    expect(result.markdown).toContain("### Backend - Preview finding: route smoke test");
   });
 
   test("respects the concurrency cap when running specialists", async () => {

@@ -87,7 +87,6 @@ Set `ANTHROPIC_API_KEY` in the repository secrets and asyncs reviews every PR fr
 | `packages/formatter`     | Markdown review rendering                                                  |
 | `packages/diff`          | Local git diff loading: working tree, staged, commit range                 |
 | `apps/action`            | GitHub Action: event parsing, review run, comment posting                  |
-| `apps/cli`               | Minimal CLI for local preview and debugging                                |
 
 Design specs and implementation plans live in [docs/superpowers/specs](docs/superpowers/specs) and [docs/superpowers/plans](docs/superpowers/plans).
 
@@ -98,15 +97,9 @@ bun install
 bun run check   # typecheck + lint + format check + tests
 ```
 
-Run the CLI preview locally:
-
-```bash
-bun apps/cli/src/main.ts pr review 3213 --dry-run --mode security --agents backend,security
-```
-
 ## Principles
 
 - Evidence-based findings only: every comment carries evidence and a recommendation.
 - Low noise by default: one strong comment beats five weak ones.
 - Provider agnostic: vendor-specific code stays behind a small provider interface.
-- Hackable and open source: the engine is a library; the Action and CLI are thin shells around it.
+- Hackable and open source: the engine is a library; the Action is a thin shell around it.
