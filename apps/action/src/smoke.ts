@@ -17,11 +17,8 @@ export async function runSmoke(args: readonly string[]): Promise<string> {
   const { provider, model } = resolveAnthropicProvider();
 
   const request: ReviewRequest = {
-    prNumber: 0,
     mode: DEFAULT_REVIEW_REQUEST_OPTIONS.mode,
     agents: [...DEFAULT_REVIEW_REQUEST_OPTIONS.agents],
-    postComments: DEFAULT_REVIEW_REQUEST_OPTIONS.postComments,
-    dryRun: DEFAULT_REVIEW_REQUEST_OPTIONS.dryRun,
   };
 
   const { result, diff } = await reviewDiff({

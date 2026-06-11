@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file is Claude Code's working context for the asyncs repo. For the full product spec, see [AGENTS.md](./AGENTS.md). For active design docs, see [docs/superpowers/specs/](./docs/superpowers/specs/) and [docs/superpowers/plans/](./docs/superpowers/plans/).
+This file is Claude Code's working context for the asyncs repo. For the full product spec, see [AGENTS.md](./AGENTS.md).
 
 ---
 
@@ -14,24 +14,15 @@ Not a SaaS product. Open source, hackable, provider-agnostic, plugin-first.
 
 ## Product positioning
 
-The CLI is the engine, not the product.
+The library is the engine. The GitHub Action is the product.
 
-The common workflow — "review every PR automatically" — is owned by the **GitHub Action**. Nobody wants to remember to run a CLI after every push.
-
-The CLI exists for:
-
-- running asyncs locally on a diff before pushing
-- developing and testing plugins
-- debugging the harness itself
-
-No interactive repo picker. No PR list browser. No Ink-based terminal UI. The CLI stays minimal so the engine stays the focus.
+The common workflow — "review every PR automatically" — is owned by the **GitHub Action**. There is no CLI: nobody wants to remember to run one after every push, and the engine stays the focus without a second surface to maintain. For local debugging, run `bun run apps/action/src/smoke.ts` with an Anthropic key.
 
 Distribution priorities:
 
 1. **Core library** (`packages/`) — orchestration engine, agents, consensus, formatter, plugin system. This is the value.
-2. **GitHub Action** — primary product surface for teams. One YAML block in CI.
-3. **CLI** (`apps/cli`) — thin wrapper for local-diff review and plugin development.
-4. **GitHub App** — later, if it makes sense.
+2. **GitHub Action** (`apps/action`) — the only product surface for teams. One YAML block in CI.
+3. **GitHub App** — later, if it makes sense.
 
 Every entry point wraps the same core. Same engine, different surfaces.
 
@@ -40,7 +31,7 @@ Every entry point wraps the same core. Same engine, different surfaces.
 ## Architecture (one diagram)
 
 ```txt
-GitHub Action / CLI / GitHub App
+GitHub Action / GitHub App
                     ↓
               PR Loader (octokit or simple-git)
                     ↓
@@ -58,7 +49,7 @@ GitHub Action / CLI / GitHub App
                     ↓
             Review Formatter
                     ↓
-       GitHub Comments / CLI Output
+       GitHub Comments
 ```
 
 ---
@@ -68,8 +59,7 @@ GitHub Action / CLI / GitHub App
 ```txt
 asyncs/
 ├── apps/
-│   ├── cli/         minimal CLI wrapper (commander + library)
-│   ├── action/      GitHub Action (future)
+│   ├── action/      GitHub Action (composite action, event parsing, comment posting)
 │   └── github-app/  GitHub App (future)
 ├── packages/
 │   ├── core/         types, constants, zod schemas, guards
@@ -79,12 +69,10 @@ asyncs/
 │   ├── consensus/    dedup, noise filter, severity/confidence sort
 │   ├── providers/    interface + concrete impls (Anthropic done; OpenAI later)
 │   ├── formatter/    markdown rendering
+│   ├── diff/         local git diff loading (working tree, staged, commit range)
 │   ├── plugins/      (future) user-defined rules + agents
 │   ├── github/       (future) PR loader, comment poster
 │   └── config/       (future) cosmiconfig + asyncs.config.ts
-├── docs/superpowers/
-│   ├── specs/       design specs from brainstorming
-│   └── plans/       implementation plans from writing-plans
 ├── AGENTS.md        full product spec (canonical)
 └── CLAUDE.md        this file
 ```
@@ -96,10 +84,9 @@ Each package follows the same shape: `src/index.ts` (re-exports), `src/types.ts`
 ## Tech stack
 
 - **Language:** TypeScript, strict mode (`exactOptionalPropertyTypes`, `noUncheckedIndexedAccess` enabled)
-- **Runtime:** Bun (CLI, package manager, test runner). Avoid Bun-only lock-in where possible so Node compatibility stays achievable.
+- **Runtime:** Bun (runtime, package manager, test runner). Avoid Bun-only lock-in where possible so Node compatibility stays achievable.
 - **Validation:** zod v4
 - **AI SDKs:** `@anthropic-ai/sdk` (concrete impl in `packages/providers`), `openai` later
-- **CLI:** `commander` (no Ink, no React)
 - **Process / Git:** `execa`, `simple-git`
 - **Orchestration:** `p-queue` for bounded concurrency
 - **GitHub:** `octokit`
@@ -181,7 +168,7 @@ For bugs: start with `superpowers:systematic-debugging`.
 
 ### Ask before major decisions
 
-For visual/aesthetic choices (when they come up — currently rare since the CLI is minimal): always offer multiple-choice options. For architectural choices: surface the trade-offs and recommend before committing.
+For visual/aesthetic choices (when they come up — currently rare since the only surface is the Action's comment output): always offer multiple-choice options. For architectural choices: surface the trade-offs and recommend before committing.
 
 ### Subagent-driven execution conventions
 
@@ -222,7 +209,5 @@ If a task seems to require one of these, surface that gap before building it.
 ## Quick references
 
 - Full spec: [AGENTS.md](./AGENTS.md)
-- Active specs: [docs/superpowers/specs/](./docs/superpowers/specs/)
-- Active plans: [docs/superpowers/plans/](./docs/superpowers/plans/)
 - Check command: `bun run check` (typecheck + lint + format + tests)
 - Format command: `bun run format`

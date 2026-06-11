@@ -59,17 +59,6 @@ export type ReviewPipelineResult = {
   failures: SpecialistFailure[];
 };
 
-export type RunPreviewReviewPipelineOptions = {
-  request: ReviewRequest;
-};
-
-export type PreviewReviewPipelineResult = {
-  plan: ReviewRunPlan;
-  files: readonly ChangedFile[];
-  report: ConsensusReport;
-  markdown: string;
-};
-
 export type SpecialistFailure = {
   agent: AgentDefinition;
   attempts: number;

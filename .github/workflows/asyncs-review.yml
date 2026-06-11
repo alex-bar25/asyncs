@@ -1,0 +1,22 @@
+name: asyncs review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+concurrency:
+  group: asyncs-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: asyncs review
+        uses: ./apps/action
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

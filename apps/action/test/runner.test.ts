@@ -5,11 +5,8 @@ import type { ProviderClient, ProviderGenerateObjectRequest } from "@asyncs/prov
 import { reviewDiff } from "../src/runner";
 
 const baseRequest: ReviewRequest = {
-  prNumber: 7,
   mode: "low-noise",
   agents: [],
-  postComments: false,
-  dryRun: true,
 };
 
 const changedFiles: ChangedFile[] = [

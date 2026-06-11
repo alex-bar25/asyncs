@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["node_modules", "dist", "coverage", "bun.lock"],
+    ignores: ["node_modules", "dist", "coverage", "bun.lock", ".remember"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strict,

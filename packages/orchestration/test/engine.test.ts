@@ -4,11 +4,8 @@ import type { ProviderClient, ProviderGenerateObjectRequest } from "@asyncs/prov
 import { runReviewPipeline } from "../src/index";
 
 const baseRequest: ReviewRequest = {
-  prNumber: 42,
   mode: "low-noise",
   agents: [],
-  postComments: false,
-  dryRun: true,
 };
 
 const changedFiles: ChangedFile[] = [

@@ -11,8 +11,7 @@ Instead of one generic AI reviewer, asyncs detects what changed in a PR, selects
 asyncs is designed as:
 
 - a sub-agent driven review harness (core library)
-- a GitHub Action for teams (primary distribution)
-- a minimal CLI for local use, plugin development, and debugging
+- a GitHub Action for teams (the product surface)
 - a plugin-driven rule system
 - a learning project for AI tooling, agent harnesses, and code review automation
 
@@ -64,28 +63,19 @@ core orchestration library
 GitHub Action for teams
 +
 plugin system
-+
-minimal CLI for local-diff review and plugin development
 ```
 
-The CLI is the engine, not the product.
+The library is the engine. The GitHub Action is the product.
 
-The common workflow — "review every PR automatically" — is owned by the GitHub Action. Nobody wants to remember to run a CLI after every push.
+The common workflow — "review every PR automatically" — is owned by the GitHub Action. There is no CLI: nobody wants to remember to run one after every push, and the engine stays the focus without a second surface to maintain.
 
-The CLI exists for:
-
-- running asyncs locally on a diff before pushing
-- developing and testing plugins
-- debugging the harness itself
-
-That's it. No interactive repo picker. No PR list browser. No fancy terminal UI. The CLI stays minimal so the engine stays the focus.
+For local debugging of the harness itself, run the action's smoke script directly (`bun run apps/action/src/smoke.ts`).
 
 Distribution priorities, in order:
 
 1. **Core library** — the orchestration engine, agents, consensus, formatter, plugin system. This is the value.
-2. **GitHub Action** — the primary product surface for teams. Drops asyncs into PR workflows with one YAML block.
-3. **CLI** — thin wrapper for local and plugin-dev use. Not the showcase.
-4. **GitHub App** — later, if it makes sense (lets organizations install asyncs without per-repo YAML).
+2. **GitHub Action** — the only product surface. Drops asyncs into PR workflows with one YAML block.
+3. **GitHub App** — later, if it makes sense (lets organizations install asyncs without per-repo YAML).
 
 ---
 
@@ -151,10 +141,6 @@ Code should still avoid unnecessary Bun-only lock-in when possible, so future No
 
 # Recommended Packages
 
-## CLI
-
-- commander (argument parsing)
-
 ## GitHub
 
 - octokit
@@ -201,7 +187,7 @@ Code should still avoid unnecessary Bun-only lock-in when possible, so future No
 # High-Level Architecture
 
 ```txt
-GitHub Action / CLI / GitHub App
+GitHub Action / GitHub App
                     ↓
               PR Loader (octokit or simple-git)
                     ↓
@@ -219,10 +205,10 @@ GitHub Action / CLI / GitHub App
                     ↓
             Review Formatter
                     ↓
-       GitHub Comments / CLI Output / Report
+       GitHub Comments / Report
 ```
 
-The same pipeline drives every entry point. The Action, CLI, and (future) GitHub App are thin shells around the same orchestration core.
+The same pipeline drives every entry point. The Action and (future) GitHub App are thin shells around the same orchestration core.
 
 ---
 
@@ -239,7 +225,7 @@ The orchestration engine. Lives in `packages/`. Coordinates the review swarm:
 - plugin loading
 - provider abstraction
 
-Every other entry point (Action, CLI, GitHub App) wraps the core library. The library is the value of the project.
+Every other entry point (Action, GitHub App) wraps the core library. The library is the value of the project.
 
 ## 2. GitHub Action
 
@@ -257,44 +243,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: asyncs/action@v1
         with:
+          fetch-depth: 0
+      - uses: alex-bar25/asyncs/apps/action@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           mode: low-noise
           agents: backend,security,architecture,testing
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-The Action handles auth via repo secrets, posts inline comments via the GitHub API, and runs the same review pipeline as the CLI.
+The Action handles auth via repo secrets, posts a summary comment plus inline comments via the GitHub API, and runs the core review pipeline.
 
-## 3. CLI
-
-Minimal wrapper. Two real use cases:
-
-- **Local-diff review** — review the working tree or staged diff before pushing.
-- **Plugin development** — scaffold and test custom rules.
-
-```bash
-# Review the working-tree diff against main
-asyncs review --local
-
-# Review only staged changes
-asyncs review --staged
-
-# Review a specific PR (handy for CI debugging or one-off runs)
-asyncs review --pr 3213 --repo alex/checkout-api
-
-# Plugin dev
-asyncs plugins create payment-idempotency
-asyncs plugins list
-
-# Config bootstrap
-asyncs config init
-```
-
-No interactive repo picker, no PR list browser, no Ink-based terminal UI. Argument parsing via commander is enough.
-
-## 4. GitHub App (future)
+## 3. GitHub App (future)
 
 If the Action proves out, the GitHub App lets organizations install asyncs once instead of per-repo YAML. Same engine underneath.
 
@@ -305,10 +265,6 @@ If the Action proves out, the GitHub App lets organizations install asyncs once 
 ```txt
 asyncs/
 ├── apps/
-│   ├── cli/
-│   │   ├── src/
-│   │   └── package.json
-│   │
 │   ├── action/
 │   │   └── src/
 │   │
@@ -437,7 +393,7 @@ Chooses which agents should run.
 
 Routing priority:
 
-1. Explicit user-selected agents from CLI/config.
+1. Explicit user-selected agents from Action inputs/config.
 2. Coordinator Agent assignments when available.
 3. Safe mode defaults.
 
@@ -834,62 +790,15 @@ Prefer one strong comment over five weak comments.
 
 ---
 
-# CLI Commands
+# Local Debugging
 
-The CLI is intentionally small. Its job is to review a diff and help develop plugins.
+There is no CLI. To run the harness locally against a real diff, use the action's smoke script with a local Anthropic key:
 
 ```bash
-# Review the working-tree diff against main (default base branch)
-asyncs review --local
-
-# Review only staged changes
-asyncs review --staged
-
-# Review a specific PR by number (requires GITHUB_TOKEN or octokit auth)
-asyncs review --pr 3213 --repo alex/checkout-api
-
-# Mode and agent selection (applies to any review command)
-asyncs review --local --mode security
-asyncs review --local --agents backend,security
-
-# Plugin dev
-asyncs plugins list
-asyncs plugins create payment-idempotency
-
-# Config bootstrap
-asyncs config init
+ANTHROPIC_API_KEY=... bun run apps/action/src/smoke.ts
 ```
 
-Commands that don't belong on the CLI:
-
-- `asyncs auth login` — auth is per-environment (env vars locally, secrets in CI, OAuth for the Action / GitHub App)
-- `asyncs repo select`, `asyncs pr list` — these are interactive UX features. The CLI's job is to take a diff and review it, not to browse PRs
-- An interactive entry point — argument-parsed commands are simpler and easier to script
-
----
-
-# Example CLI Flow (non-interactive)
-
-```txt
-$ asyncs review --local --mode low-noise
-
-Running review against working-tree diff (base: main)
-
-Coordinator Agent      planned 4 specialists
-Backend Agent          complete
-Security Agent         complete
-Architecture Agent     complete
-Testing Agent          complete
-
-Findings:
-- 1 high severity
-- 2 medium severity
-- 1 low severity (suppressed by noise filter)
-
-Wrote report to .asyncs/review-<sha>.md
-```
-
-The Action runs the same pipeline and posts findings as inline comments instead of writing a report file.
+Everything else — auth, repo selection, PR loading — is owned by the Action environment (repo secrets, event payloads, the workflow checkout).
 
 ---
 
@@ -1046,13 +955,13 @@ The core differentiator is:
 Sub-agent driven development concepts applied to PR reviews.
 ```
 
-The CLI is the engine. The Action is the product.
+The library is the engine. The Action is the product.
 
 ---
 
 # Potential CV Description
 
-Built asyncs, an open-source sub-agent driven AI PR review harness that routes pull request diffs to specialized reviewers for backend, frontend, security, testing, architecture, and performance analysis. Shipped as a TypeScript orchestration library, a GitHub Action for teams, and a minimal CLI for local diff review and plugin development, with a coordinator-agent planner and an extensible plugin system for custom engineering rules.
+Built asyncs, an open-source sub-agent driven AI PR review harness that routes pull request diffs to specialized reviewers for backend, frontend, security, testing, architecture, and performance analysis. Shipped as a TypeScript orchestration library and a GitHub Action for teams, with a coordinator-agent planner and an extensible plugin system for custom engineering rules.
 
 ---
 
@@ -1060,10 +969,4 @@ Built asyncs, an open-source sub-agent driven AI PR review harness that routes p
 
 A team should be able to add asyncs to a repo with a single Action YAML block, and feel like a small team of specialized reviewers analyzed every PR carefully, filtered out noise, and only commented when something actually mattered.
 
-Developers should be able to run the same review locally before pushing, with one command:
-
-```bash
-asyncs review --local
-```
-
-Same engine. Different surface.
+One engine. One surface. Every PR reviewed.
