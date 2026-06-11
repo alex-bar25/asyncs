@@ -1,0 +1,33 @@
+name: "asyncs review"
+description: "Run asyncs sub-agent PR review and post a summary comment."
+inputs:
+  anthropic-api-key:
+    description: "Anthropic API key for the review provider."
+    required: true
+  github-token:
+    description: "Token used to post the review comment."
+    required: false
+    default: ${{ github.token }}
+  model:
+    description: "Model id override (defaults to the asyncs default)."
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - name: Install workspace
+      shell: bash
+      working-directory: ${{ github.action_path }}/../..
+      run: bun install --frozen-lockfile
+    - name: Run asyncs review
+      shell: bash
+      working-directory: ${{ github.action_path }}/../..
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ASYNCS_MODEL_INPUT: ${{ inputs.model }}
+      run: bun run apps/action/src/action-entry.ts
