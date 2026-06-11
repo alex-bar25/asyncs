@@ -88,8 +88,6 @@ Set `ANTHROPIC_API_KEY` in the repository secrets and asyncs reviews every PR fr
 | `packages/diff`          | Local git diff loading: working tree, staged, commit range                 |
 | `apps/action`            | GitHub Action: event parsing, review run, comment posting                  |
 
-Design specs and implementation plans live in [docs/superpowers/specs](docs/superpowers/specs) and [docs/superpowers/plans](docs/superpowers/plans).
-
 ## Development
 
 ```bash

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file is Claude Code's working context for the asyncs repo. For the full product spec, see [AGENTS.md](./AGENTS.md). For active design docs, see [docs/superpowers/specs/](./docs/superpowers/specs/) and [docs/superpowers/plans/](./docs/superpowers/plans/).
+This file is Claude Code's working context for the asyncs repo. For the full product spec, see [AGENTS.md](./AGENTS.md).
 
 ---
 
@@ -73,9 +73,6 @@ asyncs/
 │   ├── plugins/      (future) user-defined rules + agents
 │   ├── github/       (future) PR loader, comment poster
 │   └── config/       (future) cosmiconfig + asyncs.config.ts
-├── docs/superpowers/
-│   ├── specs/       design specs from brainstorming
-│   └── plans/       implementation plans from writing-plans
 ├── AGENTS.md        full product spec (canonical)
 └── CLAUDE.md        this file
 ```
@@ -212,7 +209,5 @@ If a task seems to require one of these, surface that gap before building it.
 ## Quick references
 
 - Full spec: [AGENTS.md](./AGENTS.md)
-- Active specs: [docs/superpowers/specs/](./docs/superpowers/specs/)
-- Active plans: [docs/superpowers/plans/](./docs/superpowers/plans/)
 - Check command: `bun run check` (typecheck + lint + format + tests)
 - Format command: `bun run format`
