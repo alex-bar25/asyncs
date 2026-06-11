@@ -20,6 +20,11 @@ function createFakeClient(existing: readonly ReviewComment[]) {
     async updateComment(input) {
       updated.push(input);
     },
+    async listInlineComments() {
+      return [];
+    },
+    async createInlineComment() {},
+    async deleteInlineComment() {},
   };
 
   return { client, created, updated };

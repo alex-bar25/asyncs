@@ -42,10 +42,33 @@ export type ReviewComment = {
   body: string;
 };
 
+export type InlineComment = {
+  id: number;
+  body: string;
+};
+
+export type SyncInlineCommentsOutcome = {
+  posted: number;
+  skipped: number;
+};
+
+export type CreateInlineCommentInput = {
+  owner: string;
+  repo: string;
+  prNumber: number;
+  commitId: string;
+  path: string;
+  line: number;
+  body: string;
+};
+
 export type ReviewCommentClient = {
   listComments(input: { owner: string; repo: string; prNumber: number }): Promise<readonly ReviewComment[]>;
   createComment(input: { owner: string; repo: string; prNumber: number; body: string }): Promise<void>;
   updateComment(input: { owner: string; repo: string; commentId: number; body: string }): Promise<void>;
+  listInlineComments(input: { owner: string; repo: string; prNumber: number }): Promise<readonly InlineComment[]>;
+  createInlineComment(input: CreateInlineCommentInput): Promise<void>;
+  deleteInlineComment(input: { owner: string; repo: string; commentId: number }): Promise<void>;
 };
 
 export type RunReviewActionDeps = {
@@ -56,4 +79,5 @@ export type RunReviewActionDeps = {
 
 export type ReviewActionOutcome = {
   ok: boolean;
+  inline?: SyncInlineCommentsOutcome;
 };

@@ -31,5 +31,34 @@ export function createReviewCommentClient(token: string): ReviewCommentClient {
         body: input.body,
       });
     },
+    async listInlineComments(input) {
+      const response = await octokit.rest.pulls.listReviewComments({
+        owner: input.owner,
+        repo: input.repo,
+        pull_number: input.prNumber,
+        per_page: 100,
+      });
+
+      return response.data.map((comment) => ({ id: comment.id, body: comment.body }));
+    },
+    async createInlineComment(input) {
+      await octokit.rest.pulls.createReviewComment({
+        owner: input.owner,
+        repo: input.repo,
+        pull_number: input.prNumber,
+        commit_id: input.commitId,
+        path: input.path,
+        line: input.line,
+        side: "RIGHT",
+        body: input.body,
+      });
+    },
+    async deleteInlineComment(input) {
+      await octokit.rest.pulls.deleteReviewComment({
+        owner: input.owner,
+        repo: input.repo,
+        comment_id: input.commentId,
+      });
+    },
   };
 }
