@@ -9,11 +9,8 @@ import {
 } from "../src/index";
 
 const baseRequest: ReviewRequest = {
-  prNumber: 3213,
   mode: "low-noise",
   agents: [],
-  postComments: false,
-  dryRun: true,
 };
 
 describe("review run planning", () => {

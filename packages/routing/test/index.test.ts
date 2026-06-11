@@ -3,11 +3,8 @@ import type { ReviewRequest } from "@asyncs/core";
 import { AUTO_AGENT_KINDS_BY_MODE, resolveAgentRoute, resolveAgentRoutes } from "../src/index";
 
 const baseRequest: ReviewRequest = {
-  prNumber: 3213,
   mode: "low-noise",
   agents: [],
-  postComments: false,
-  dryRun: true,
 };
 
 describe("agent routing", () => {
@@ -47,7 +44,6 @@ describe("agent routing", () => {
       baseRequest,
       {
         ...baseRequest,
-        prNumber: 3214,
         mode: "security",
       },
     ]);

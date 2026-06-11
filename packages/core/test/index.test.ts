@@ -34,8 +34,6 @@ describe("core metadata", () => {
     expect(DEFAULT_REVIEW_REQUEST_OPTIONS).toEqual({
       mode: "low-noise",
       agents: [],
-      postComments: false,
-      dryRun: false,
     });
     expect(AGENT_KINDS).toContain("backend");
     expect(AGENT_KINDS).toContain("security");
@@ -90,15 +88,12 @@ describe("core metadata", () => {
 
   test("supports typed review requests", () => {
     const request: ReviewRequest = {
-      prNumber: 3213,
       mode: "low-noise",
       agents: ["backend", "security"],
-      postComments: false,
-      dryRun: true,
     };
 
     expect(request.agents).toEqual(["backend", "security"]);
-    expect(request.dryRun).toBe(true);
+    expect(request.mode).toBe("low-noise");
   });
 
   test("noopLogger exposes Logger interface methods that do not throw", () => {

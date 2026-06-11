@@ -51,9 +51,3 @@ export type ProviderClient = {
   generateText(request: ProviderGenerateTextRequest): Promise<ProviderGenerateTextResult>;
   generateObject?(request: ProviderGenerateObjectRequest): Promise<ProviderGenerateObjectResult>;
 };
-
-export type ProviderRegistry = {
-  register(client: ProviderClient): void;
-  get(kind: ProviderKind): ProviderClient | undefined;
-  list(): ProviderClient[];
-};

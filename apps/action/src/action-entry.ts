@@ -1,4 +1,4 @@
-import { DEFAULT_REVIEW_REQUEST_OPTIONS, type ReviewRequest } from "@asyncs/core";
+import type { ReviewRequest } from "@asyncs/core";
 import { runReviewAction } from "./action";
 import { readPullRequestEvent } from "./event";
 import { createReviewCommentClient } from "./github";
@@ -40,11 +40,8 @@ export async function runActionEntry(env: Record<string, string | undefined>): P
     const { provider, model } = resolveAnthropicProvider(resolveOptions);
 
     const request: ReviewRequest = {
-      prNumber: pullRequest.prNumber,
       mode: reviewOptions.mode,
       agents: reviewOptions.agents,
-      postComments: DEFAULT_REVIEW_REQUEST_OPTIONS.postComments,
-      dryRun: DEFAULT_REVIEW_REQUEST_OPTIONS.dryRun,
     };
 
     return reviewDiff({

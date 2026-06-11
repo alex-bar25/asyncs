@@ -13,8 +13,6 @@ export const DEFAULT_REVIEW_MODE = REVIEW_MODES[0];
 export const DEFAULT_REVIEW_REQUEST_OPTIONS = {
   mode: DEFAULT_REVIEW_MODE,
   agents: [],
-  postComments: false,
-  dryRun: false,
 } as const;
 
 export const AGENT_KINDS = [

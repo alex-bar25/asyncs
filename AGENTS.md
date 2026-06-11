@@ -243,12 +243,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: asyncs/action@v1
         with:
+          fetch-depth: 0
+      - uses: alex-bar25/asyncs/apps/action@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           mode: low-noise
           agents: backend,security,architecture,testing
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 The Action handles auth via repo secrets, posts a summary comment plus inline comments via the GitHub API, and runs the core review pipeline.

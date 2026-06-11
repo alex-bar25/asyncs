@@ -19,11 +19,8 @@ const event: PullRequestEvent = {
 };
 
 const baseRequest: ReviewRequest = {
-  prNumber: 7,
   mode: "low-noise",
   agents: [],
-  postComments: false,
-  dryRun: false,
 };
 
 const fakeRun: ReviewRunResult = {
