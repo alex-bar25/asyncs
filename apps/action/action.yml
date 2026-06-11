@@ -12,6 +12,14 @@ inputs:
     description: "Model id override (defaults to the asyncs default)."
     required: false
     default: ""
+  mode:
+    description: "Review mode: low-noise, full, security, architecture, or testing."
+    required: false
+    default: ""
+  agents:
+    description: "Comma-separated agent kinds to run, overriding mode-based routing."
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -30,4 +38,6 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         ASYNCS_MODEL_INPUT: ${{ inputs.model }}
+        ASYNCS_MODE_INPUT: ${{ inputs.mode }}
+        ASYNCS_AGENTS_INPUT: ${{ inputs.agents }}
       run: bun run apps/action/src/action-entry.ts
