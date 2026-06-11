@@ -36,12 +36,9 @@ export async function syncInlineComments(input: {
     repo: input.repo,
     prNumber: input.prNumber,
   });
-
-  for (const comment of existing) {
-    if (comment.body.includes(INLINE_COMMENT_MARKER)) {
-      await input.client.deleteInlineComment({ owner: input.owner, repo: input.repo, commentId: comment.id });
-    }
-  }
+  const staleIds = existing
+    .filter((comment) => comment.body.includes(INLINE_COMMENT_MARKER))
+    .map((comment) => comment.id);
 
   const anchored = input.findings.filter(isInlineCommentFinding);
   let posted = 0;
@@ -61,6 +58,14 @@ export async function syncInlineComments(input: {
       posted += 1;
     } catch {
       skipped += 1;
+    }
+  }
+
+  for (const commentId of staleIds) {
+    try {
+      await input.client.deleteInlineComment({ owner: input.owner, repo: input.repo, commentId });
+    } catch {
+      continue;
     }
   }
 

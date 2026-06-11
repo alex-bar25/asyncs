@@ -36,9 +36,10 @@ const fakeRun: ReviewRunResult = {
   diff: { baseRef: "base-sha", headRef: "head-sha", files: [], skippedBinaries: [] },
 };
 
-function createFakeClient(existing: readonly ReviewComment[]) {
+function createFakeClient(existing: readonly ReviewComment[], existingInline: readonly ReviewComment[] = []) {
   const posted: string[] = [];
   const postedInline: CreateInlineCommentInput[] = [];
+  const deletedInline: number[] = [];
 
   const client: ReviewCommentClient = {
     async listComments() {
@@ -51,15 +52,17 @@ function createFakeClient(existing: readonly ReviewComment[]) {
       posted.push(input.body);
     },
     async listInlineComments() {
-      return [];
+      return existingInline;
     },
     async createInlineComment(input) {
       postedInline.push(input);
     },
-    async deleteInlineComment() {},
+    async deleteInlineComment(input) {
+      deletedInline.push(input.commentId);
+    },
   };
 
-  return { client, posted, postedInline };
+  return { client, posted, postedInline, deletedInline };
 }
 
 describe("runReviewAction", () => {
@@ -90,7 +93,7 @@ describe("runReviewAction", () => {
     });
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.inline).toBeUndefined();
+    expect(outcome.inline).toEqual({ posted: 0, skipped: 0 });
     expect(posted).toHaveLength(1);
     expect(posted[0]).toContain("asyncs review failed");
     expect(posted[0]).toContain("provider exploded");
@@ -126,5 +129,23 @@ describe("runReviewAction", () => {
     expect(postedInline).toHaveLength(1);
     expect(postedInline[0]).toMatchObject({ path: "src/payments/retry.ts", line: 10, commitId: "head-sha" });
     expect(postedInline[0]?.body).toContain(INLINE_COMMENT_MARKER);
+  });
+
+  test("cleans up stale inline comments when the review fails", async () => {
+    const { client, deletedInline } = createFakeClient(
+      [],
+      [{ id: 9, body: `${INLINE_COMMENT_MARKER}\n\nstale finding` }],
+    );
+
+    const outcome = await runReviewAction({
+      event,
+      review: async () => {
+        throw new Error("provider exploded");
+      },
+      client,
+    });
+
+    expect(outcome.ok).toBe(false);
+    expect(deletedInline).toEqual([9]);
   });
 });

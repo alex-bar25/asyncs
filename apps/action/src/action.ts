@@ -28,10 +28,6 @@ export async function runReviewAction(deps: RunReviewActionDeps): Promise<Review
     body,
   });
 
-  if (!ok) {
-    return { ok };
-  }
-
   const inline = await syncInlineComments({
     client: deps.client,
     owner: deps.event.owner,

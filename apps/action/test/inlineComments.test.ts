@@ -19,10 +19,13 @@ const finding: ReviewFinding = {
 function createFakeClient(input: {
   existingInline?: readonly InlineComment[];
   failCreateForPaths?: readonly string[];
+  failDeleteForIds?: readonly number[];
 }) {
   const created: CreateInlineCommentInput[] = [];
   const deleted: number[] = [];
+  const calls: string[] = [];
   const failPaths = new Set(input.failCreateForPaths ?? []);
+  const failDeletes = new Set(input.failDeleteForIds ?? []);
 
   const client: ReviewCommentClient = {
     async listComments() {
@@ -34,17 +37,22 @@ function createFakeClient(input: {
       return input.existingInline ?? [];
     },
     async createInlineComment(create) {
+      calls.push("create");
       if (failPaths.has(create.path)) {
         throw new Error("Validation Failed: line must be part of the diff");
       }
       created.push(create);
     },
     async deleteInlineComment(remove) {
+      calls.push("delete");
+      if (failDeletes.has(remove.commentId)) {
+        throw new Error("Not Found");
+      }
       deleted.push(remove.commentId);
     },
   };
 
-  return { client, created, deleted };
+  return { client, created, deleted, calls };
 }
 
 describe("buildInlineCommentBody", () => {
@@ -83,8 +91,8 @@ describe("syncInlineComments", () => {
     });
   });
 
-  test("deletes previous marker-tagged inline comments before posting", async () => {
-    const { client, deleted } = createFakeClient({
+  test("deletes previous marker-tagged inline comments only after posting new ones", async () => {
+    const { client, deleted, calls } = createFakeClient({
       existingInline: [
         { id: 1, body: `${INLINE_COMMENT_MARKER}\n\nold finding` },
         { id: 2, body: "human comment, leave me alone" },
@@ -101,6 +109,47 @@ describe("syncInlineComments", () => {
     });
 
     expect(deleted).toEqual([1]);
+    expect(calls).toEqual(["create", "delete"]);
+  });
+
+  test("deletes stale marker-tagged comments when there are no findings", async () => {
+    const { client, deleted } = createFakeClient({
+      existingInline: [{ id: 1, body: `${INLINE_COMMENT_MARKER}\n\nold finding` }],
+    });
+
+    const outcome = await syncInlineComments({
+      client,
+      owner: "alex-bar25",
+      repo: "asyncs",
+      prNumber: 7,
+      commitId: "head-sha",
+      findings: [],
+    });
+
+    expect(outcome).toEqual({ posted: 0, skipped: 0 });
+    expect(deleted).toEqual([1]);
+  });
+
+  test("tolerates per-comment delete failures", async () => {
+    const { client, deleted } = createFakeClient({
+      existingInline: [
+        { id: 1, body: `${INLINE_COMMENT_MARKER}\n\nold finding` },
+        { id: 2, body: `${INLINE_COMMENT_MARKER}\n\nanother old finding` },
+      ],
+      failDeleteForIds: [1],
+    });
+
+    const outcome = await syncInlineComments({
+      client,
+      owner: "alex-bar25",
+      repo: "asyncs",
+      prNumber: 7,
+      commitId: "head-sha",
+      findings: [finding],
+    });
+
+    expect(outcome).toEqual({ posted: 1, skipped: 0 });
+    expect(deleted).toEqual([2]);
   });
 
   test("tolerates per-comment create failures and counts them as skipped", async () => {

@@ -6,14 +6,14 @@ export function createReviewCommentClient(token: string): ReviewCommentClient {
 
   return {
     async listComments(input) {
-      const response = await octokit.rest.issues.listComments({
+      const comments = await octokit.paginate(octokit.rest.issues.listComments, {
         owner: input.owner,
         repo: input.repo,
         issue_number: input.prNumber,
         per_page: 100,
       });
 
-      return response.data.map((comment) => ({ id: comment.id, body: comment.body ?? "" }));
+      return comments.map((comment) => ({ id: comment.id, body: comment.body ?? "" }));
     },
     async createComment(input) {
       await octokit.rest.issues.createComment({
@@ -32,14 +32,14 @@ export function createReviewCommentClient(token: string): ReviewCommentClient {
       });
     },
     async listInlineComments(input) {
-      const response = await octokit.rest.pulls.listReviewComments({
+      const comments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
         owner: input.owner,
         repo: input.repo,
         pull_number: input.prNumber,
         per_page: 100,
       });
 
-      return response.data.map((comment) => ({ id: comment.id, body: comment.body }));
+      return comments.map((comment) => ({ id: comment.id, body: comment.body }));
     },
     async createInlineComment(input) {
       await octokit.rest.pulls.createReviewComment({

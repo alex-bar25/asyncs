@@ -79,5 +79,5 @@ export type RunReviewActionDeps = {
 
 export type ReviewActionOutcome = {
   ok: boolean;
-  inline?: SyncInlineCommentsOutcome;
+  inline: SyncInlineCommentsOutcome;
 };
