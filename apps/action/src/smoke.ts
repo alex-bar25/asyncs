@@ -1,6 +1,6 @@
 import { DEFAULT_REVIEW_REQUEST_OPTIONS, type ReviewRequest } from "@asyncs/core";
 import type { LocalDiffMode } from "@asyncs/diff";
-import { resolveAnthropicProvider } from "./provider";
+import { resolveProvider } from "./provider";
 import { reviewDiff } from "./runner";
 
 function parseDiffMode(args: readonly string[]): LocalDiffMode {
@@ -14,7 +14,7 @@ function parseDiffMode(args: readonly string[]): LocalDiffMode {
 }
 
 export async function runSmoke(args: readonly string[]): Promise<string> {
-  const { provider, model } = resolveAnthropicProvider();
+  const { provider, model } = resolveProvider();
 
   const request: ReviewRequest = {
     mode: DEFAULT_REVIEW_REQUEST_OPTIONS.mode,

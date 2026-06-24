@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ReviewFinding } from "@asyncs/core";
+import type { Logger, ReviewFinding } from "@asyncs/core";
 import { INLINE_COMMENT_MARKER } from "../src/constants";
 import { buildInlineCommentBody, syncInlineComments } from "../src/inlineComments";
 import type { CreateInlineCommentInput, InlineComment, ReviewCommentClient } from "../src/types";
@@ -166,5 +166,33 @@ describe("syncInlineComments", () => {
 
     expect(outcome).toEqual({ posted: 1, skipped: 1 });
     expect(created).toHaveLength(1);
+  });
+
+  test("logs the file, line, and reason for each skipped inline comment", async () => {
+    const { client } = createFakeClient({ failCreateForPaths: ["src/outside-diff.ts"] });
+    const warnings: { message: string; meta?: Record<string, unknown> }[] = [];
+    const logger: Logger = {
+      debug: () => {},
+      info: () => {},
+      warn: (message, meta) => warnings.push({ message, ...(meta === undefined ? {} : { meta }) }),
+      error: () => {},
+    };
+
+    await syncInlineComments({
+      client,
+      owner: "alex-bar25",
+      repo: "asyncs",
+      prNumber: 7,
+      commitId: "head-sha",
+      findings: [{ ...finding, file: "src/outside-diff.ts", line: 1 }],
+      logger,
+    });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.meta).toEqual({
+      file: "src/outside-diff.ts",
+      line: 1,
+      reason: "Validation Failed: line must be part of the diff",
+    });
   });
 });

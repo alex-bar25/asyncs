@@ -1,7 +1,6 @@
-export const DEFAULT_REVIEW_MODEL = "claude-sonnet-4-5";
+export const DEFAULT_OPENAI_REVIEW_MODEL = "gpt-4.1";
 
-export const MISSING_API_KEY_MESSAGE =
-  "Anthropic API key is required. Set ANTHROPIC_API_KEY or pass { apiKey } to resolveAnthropicProvider.";
+export const DEFAULT_ANTHROPIC_REVIEW_MODEL = "claude-sonnet-4-5";
 
 export const REVIEW_COMMENT_MARKER = "<!-- asyncs-review -->";
 

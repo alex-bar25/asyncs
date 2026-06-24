@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { DEFAULT_REVIEW_MODEL } from "../src/constants";
-import { MissingApiKeyError, resolveAnthropicProvider } from "../src/provider";
+import { DEFAULT_ANTHROPIC_REVIEW_MODEL, DEFAULT_OPENAI_REVIEW_MODEL } from "../src/constants";
+import { MissingApiKeyError, resolveProvider } from "../src/provider";
 
-const ENV_KEYS = ["ANTHROPIC_API_KEY", "ASYNCS_MODEL"] as const;
+const ENV_KEYS = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "ASYNCS_MODEL", "ASYNCS_PROVIDER"] as const;
 const savedEnv = new Map<string, string | undefined>();
 
 function clearEnv(): void {
@@ -26,23 +26,31 @@ afterEach(() => {
   savedEnv.clear();
 });
 
-describe("resolveAnthropicProvider", () => {
-  test("throws MissingApiKeyError when no key is available", () => {
+describe("resolveProvider", () => {
+  test("throws MissingApiKeyError when no OpenAI key is available by default", () => {
     clearEnv();
-    expect(() => resolveAnthropicProvider({})).toThrow(MissingApiKeyError);
+    expect(() => resolveProvider({})).toThrow(MissingApiKeyError);
   });
 
-  test("builds an Anthropic provider from an explicit apiKey with the default model", () => {
+  test("builds an OpenAI provider by default", () => {
     clearEnv();
-    const { provider, model } = resolveAnthropicProvider({ apiKey: "test-key" });
+    const { provider, model } = resolveProvider({ openAIApiKey: "test-key" });
+
+    expect(provider.kind).toBe("openai");
+    expect(model).toBe(DEFAULT_OPENAI_REVIEW_MODEL);
+  });
+
+  test("builds an Anthropic provider when requested", () => {
+    clearEnv();
+    const { provider, model } = resolveProvider({ provider: "anthropic", anthropicApiKey: "test-key" });
 
     expect(provider.kind).toBe("anthropic");
-    expect(model).toBe(DEFAULT_REVIEW_MODEL);
+    expect(model).toBe(DEFAULT_ANTHROPIC_REVIEW_MODEL);
   });
 
   test("prefers an explicit model option over the default", () => {
     clearEnv();
-    const { model } = resolveAnthropicProvider({ apiKey: "test-key", model: "custom-model" });
+    const { model } = resolveProvider({ openAIApiKey: "test-key", model: "custom-model" });
 
     expect(model).toBe("custom-model");
   });
@@ -50,8 +58,16 @@ describe("resolveAnthropicProvider", () => {
   test("falls back to ASYNCS_MODEL when no model option is given", () => {
     clearEnv();
     process.env.ASYNCS_MODEL = "env-model";
-    const { model } = resolveAnthropicProvider({ apiKey: "test-key" });
+    const { model } = resolveProvider({ openAIApiKey: "test-key" });
 
     expect(model).toBe("env-model");
+  });
+
+  test("falls back to ASYNCS_PROVIDER when no provider option is given", () => {
+    clearEnv();
+    process.env.ASYNCS_PROVIDER = "anthropic";
+    const { provider } = resolveProvider({ anthropicApiKey: "test-key" });
+
+    expect(provider.kind).toBe("anthropic");
   });
 });

@@ -1,11 +1,22 @@
-import type { ReviewRequest } from "@asyncs/core";
+import type { Logger, ReviewRequest } from "@asyncs/core";
 import { runReviewAction } from "./action";
 import { readPullRequestEvent } from "./event";
 import { createReviewCommentClient } from "./github";
 import { parseReviewOptionsInput, type ParsedReviewOptions } from "./inputs";
-import { resolveAnthropicProvider } from "./provider";
+import { resolveProvider } from "./provider";
 import { reviewDiff } from "./runner";
 import type { PullRequestEvent, ReviewRunResult } from "./types";
+
+function formatMeta(meta?: Record<string, unknown>): string {
+  return meta === undefined ? "" : ` ${JSON.stringify(meta)}`;
+}
+
+const consoleLogger: Logger = {
+  debug: () => {},
+  info: (message, meta) => process.stdout.write(`${message}${formatMeta(meta)}\n`),
+  warn: (message, meta) => process.stderr.write(`${message}${formatMeta(meta)}\n`),
+  error: (message, meta) => process.stderr.write(`${message}${formatMeta(meta)}\n`),
+};
 
 export async function runActionEntry(env: Record<string, string | undefined>): Promise<number> {
   const githubToken = env.GITHUB_TOKEN ?? "";
@@ -25,7 +36,13 @@ export async function runActionEntry(env: Record<string, string | undefined>): P
   }
 
   const modelInput = env.ASYNCS_MODEL_INPUT;
-  const resolveOptions = modelInput !== undefined && modelInput.length > 0 ? { model: modelInput } : {};
+  const providerInput = env.ASYNCS_PROVIDER_INPUT;
+  const resolveOptions = {
+    ...(providerInput === undefined || providerInput.length === 0 ? {} : { provider: providerInput }),
+    ...(modelInput === undefined || modelInput.length === 0 ? {} : { model: modelInput }),
+    ...(env.OPENAI_API_KEY === undefined ? {} : { openAIApiKey: env.OPENAI_API_KEY }),
+    ...(env.ANTHROPIC_API_KEY === undefined ? {} : { anthropicApiKey: env.ANTHROPIC_API_KEY }),
+  };
 
   let reviewOptions: ParsedReviewOptions;
 
@@ -37,7 +54,7 @@ export async function runActionEntry(env: Record<string, string | undefined>): P
   }
 
   const review = async (pullRequest: PullRequestEvent): Promise<ReviewRunResult> => {
-    const { provider, model } = resolveAnthropicProvider(resolveOptions);
+    const { provider, model } = resolveProvider(resolveOptions);
 
     const request: ReviewRequest = {
       mode: reviewOptions.mode,
@@ -54,7 +71,7 @@ export async function runActionEntry(env: Record<string, string | undefined>): P
   };
 
   const client = createReviewCommentClient(githubToken);
-  const outcome = await runReviewAction({ event, review, client });
+  const outcome = await runReviewAction({ event, review, client, logger: consoleLogger });
 
   return outcome.ok ? 0 : 1;
 }

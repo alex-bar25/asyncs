@@ -35,6 +35,7 @@ export async function runReviewAction(deps: RunReviewActionDeps): Promise<Review
     prNumber: deps.event.prNumber,
     commitId: deps.event.headSha,
     findings,
+    ...(deps.logger === undefined ? {} : { logger: deps.logger }),
   });
 
   return { ok, inline };

@@ -1,4 +1,5 @@
-import type { ReviewFinding } from "@asyncs/core";
+import { noopLogger } from "@asyncs/core";
+import type { Logger, ReviewFinding } from "@asyncs/core";
 import { INLINE_COMMENT_MARKER } from "./constants";
 import type { ReviewCommentClient, SyncInlineCommentsOutcome } from "./types";
 
@@ -30,7 +31,9 @@ export async function syncInlineComments(input: {
   prNumber: number;
   commitId: string;
   findings: readonly ReviewFinding[];
+  logger?: Logger;
 }): Promise<SyncInlineCommentsOutcome> {
+  const logger = input.logger ?? noopLogger;
   const existing = await input.client.listInlineComments({
     owner: input.owner,
     repo: input.repo,
@@ -56,7 +59,13 @@ export async function syncInlineComments(input: {
         body: buildInlineCommentBody(finding),
       });
       posted += 1;
-    } catch {
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : String(error);
+      logger.warn("asyncs: skipped inline comment (likely outside the PR diff hunk)", {
+        file: finding.file,
+        line: finding.line,
+        reason,
+      });
       skipped += 1;
     }
   }

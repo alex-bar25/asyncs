@@ -1,10 +1,12 @@
-import type { ReviewRequest } from "@asyncs/core";
+import type { Logger, ReviewRequest } from "@asyncs/core";
 import type { LoadLocalDiffOptions, LocalDiffMode, LocalDiffResult } from "@asyncs/diff";
 import type { ReviewPipelineResult, RobustnessOptions } from "@asyncs/orchestration";
 import type { ProviderClient } from "@asyncs/providers";
 
-export type ResolveAnthropicProviderOptions = {
-  apiKey?: string;
+export type ResolveProviderOptions = {
+  provider?: string;
+  openAIApiKey?: string;
+  anthropicApiKey?: string;
   model?: string;
   maxTokens?: number;
 };
@@ -75,6 +77,7 @@ export type RunReviewActionDeps = {
   event: PullRequestEvent;
   review: (event: PullRequestEvent) => Promise<ReviewRunResult>;
   client: ReviewCommentClient;
+  logger?: Logger;
 };
 
 export type ReviewActionOutcome = {
