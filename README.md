@@ -1,5 +1,7 @@
 # asyncs
 
+[![CI](https://github.com/alex-bar25/asyncs/actions/workflows/ci.yml/badge.svg)](https://github.com/alex-bar25/asyncs/actions/workflows/ci.yml)
+
 Open-source sub-agent driven AI PR review harness.
 
 Instead of one generic AI reviewer, asyncs reviews pull requests like a team. A coordinator agent reads the diff and plans the review, specialist agents (backend, security, architecture, testing, and more) run in parallel on their own slices, and a consensus layer merges their findings, drops duplicates, and filters out noise before anything reaches your PR.
@@ -51,18 +53,20 @@ jobs:
           fetch-depth: 0
       - uses: alex-bar25/asyncs/apps/action@v1
         with:
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           mode: low-noise
           agents: backend,security,architecture,testing
 ```
 
-Set `ANTHROPIC_API_KEY` in the repository secrets and asyncs reviews every PR from then on.
+Set `OPENAI_API_KEY` in the repository secrets and asyncs reviews every PR from then on. The action provisions its own Bun runtime, so the repository it reviews can be written in any language.
 
 ### Action inputs
 
 | Input               | Required | Default        | Description                                                                                  |
 | ------------------- | -------- | -------------- | -------------------------------------------------------------------------------------------- |
-| `anthropic-api-key` | yes      | —              | Anthropic API key used by the review agents.                                                 |
+| `provider`          | no       | `openai`       | Review provider: `openai` or `anthropic`.                                                    |
+| `openai-api-key`    | no       | —              | OpenAI API key used when `provider` is `openai`.                                             |
+| `anthropic-api-key` | no       | —              | Anthropic API key used when `provider` is `anthropic`.                                       |
 | `github-token`      | no       | `github.token` | Token used to post review comments.                                                          |
 | `model`             | no       | asyncs default | Model id override.                                                                           |
 | `mode`              | no       | `low-noise`    | Review mode: `low-noise`, `full`, `security`, `architecture`, or `testing`.                  |
@@ -74,6 +78,18 @@ Set `ANTHROPIC_API_KEY` in the repository secrets and asyncs reviews every PR fr
 - One inline comment per finding, anchored to the changed file and line, recreated on every run so they always match the latest review.
 - Findings that cannot be anchored to the diff stay in the summary.
 
+The changed code is read from the checked-out git commit range (`base..head`), which is why the workflow needs `actions/checkout` with `fetch-depth: 0`. Comments are posted through the GitHub pull request review API. Inline anchors must land on lines inside the PR diff hunks; anything outside the diff falls back to the summary.
+
+## Example output
+
+asyncs reviewing its own change set with OpenAI `gpt-4.1` in `low-noise` mode — the coordinator planned the review, three specialist agents ran in parallel, and the consensus engine merged their findings. One of the five findings:
+
+> **Testing — OpenAI provider request construction, abort logic, and error handling are regression tested** _(high severity, high confidence — `packages/providers/test/openai.test.ts`)_
+>
+> The new OpenAI provider is directly exercised: request-payload construction, abort-signal forwarding, output/usage parsing, and JSON-parse error handling are each validated.
+
+See [`examples/sample-review.md`](examples/sample-review.md) for the full, unedited run.
+
 ## Architecture
 
 | Package                  | Responsibility                                                             |
@@ -83,7 +99,7 @@ Set `ANTHROPIC_API_KEY` in the repository secrets and asyncs reviews every PR fr
 | `packages/orchestration` | Review planning, parallel execution, retries, timeouts, pipeline engine    |
 | `packages/routing`       | Mode-based agent defaults and explicit overrides                           |
 | `packages/consensus`     | Deduplication, noise filtering, severity and confidence ranking            |
-| `packages/providers`     | Provider interface plus the Anthropic implementation                       |
+| `packages/providers`     | Provider interface plus the OpenAI and Anthropic implementations           |
 | `packages/formatter`     | Markdown review rendering                                                  |
 | `packages/diff`          | Local git diff loading: working tree, staged, commit range                 |
 | `apps/action`            | GitHub Action: event parsing, review run, comment posting                  |

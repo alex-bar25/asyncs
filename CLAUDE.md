@@ -67,7 +67,7 @@ asyncs/
 │   ├── orchestration/  plan creation, parallel execution, pipeline composition
 │   ├── routing/      mode-based defaults + explicit override
 │   ├── consensus/    dedup, noise filter, severity/confidence sort
-│   ├── providers/    interface + concrete impls (Anthropic done; OpenAI later)
+│   ├── providers/    interface + concrete impls (OpenAI + Anthropic)
 │   ├── formatter/    markdown rendering
 │   ├── diff/         local git diff loading (working tree, staged, commit range)
 │   ├── plugins/      (future) user-defined rules + agents

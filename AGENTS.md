@@ -247,7 +247,7 @@ jobs:
           fetch-depth: 0
       - uses: alex-bar25/asyncs/apps/action@v1
         with:
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           mode: low-noise
           agents: backend,security,architecture,testing
 ```
@@ -262,29 +262,32 @@ If the Action proves out, the GitHub App lets organizations install asyncs once 
 
 # Repository Structure
 
+> **Status note.** This document is the full product spec, so it describes the target shape — not everything below is built yet. As of today the implemented surface is: `apps/action` plus the packages `core`, `agents`, `orchestration`, `routing`, `consensus`, `providers`, `formatter`, and `diff`. Everything marked _(planned)_ below — `apps/github-app`, the `github`, `plugins`, `config`, and `shared` packages, the top-level `plugins/`, `examples/`, `templates/` directories, and `asyncs.config.ts` — is designed but not yet implemented. The GitHub integration currently lives inside `apps/action/src` (event parsing, diff loading via `@asyncs/diff`, and comment posting), not in a separate `packages/github`.
+
 ```txt
 asyncs/
 ├── apps/
-│   ├── action/
+│   ├── action/                 # built
 │   │   └── src/
 │   │
-│   └── github-app/
+│   └── github-app/             # planned
 │       └── src/
 │
 ├── packages/
-│   ├── core/
-│   ├── agents/
-│   ├── orchestration/
-│   ├── routing/
-│   ├── consensus/
-│   ├── providers/
-│   ├── plugins/
-│   ├── github/
-│   ├── formatter/
-│   ├── config/
-│   └── shared/
+│   ├── core/                   # built
+│   ├── agents/                 # built
+│   ├── orchestration/          # built
+│   ├── routing/                # built
+│   ├── consensus/              # built
+│   ├── providers/              # built
+│   ├── formatter/              # built
+│   ├── diff/                   # built
+│   ├── plugins/                # planned
+│   ├── github/                 # planned
+│   ├── config/                 # planned
+│   └── shared/                 # planned
 │
-├── plugins/
+├── plugins/                    # planned
 │   ├── backend/
 │   ├── frontend/
 │   ├── security/
@@ -292,10 +295,10 @@ asyncs/
 │   ├── testing/
 │   └── examples/
 │
-├── docs/
-├── examples/
-├── templates/
-├── asyncs.config.ts
+├── docs/                       # planned
+├── examples/                   # holds a sample review run; plugin/config examples planned
+├── templates/                  # planned
+├── asyncs.config.ts            # planned
 ├── AGENTS.md
 ├── CLAUDE.md
 └── README.md
@@ -322,7 +325,7 @@ Owns shared domain models:
 
 ---
 
-## packages/github
+## packages/github _(planned — today this lives in `apps/action/src`)_
 
 Owns GitHub integration:
 
@@ -468,7 +471,7 @@ Responsibilities:
 
 ---
 
-## packages/plugins
+## packages/plugins _(planned — not yet implemented)_
 
 Loads user-defined plugins.
 
@@ -671,7 +674,7 @@ Only testing-related findings.
 
 ---
 
-# Plugin System
+# Plugin System _(planned)_
 
 Plugins are first-class.
 
@@ -713,7 +716,7 @@ export default defineRule({
 
 ---
 
-# User Config
+# User Config _(planned)_
 
 Example `asyncs.config.ts`:
 
@@ -792,10 +795,10 @@ Prefer one strong comment over five weak comments.
 
 # Local Debugging
 
-There is no CLI. To run the harness locally against a real diff, use the action's smoke script with a local Anthropic key:
+There is no CLI. To run the harness locally against a real diff, use the action's smoke script with a local OpenAI key:
 
 ```bash
-ANTHROPIC_API_KEY=... bun run apps/action/src/smoke.ts
+OPENAI_API_KEY=... bun run apps/action/src/smoke.ts
 ```
 
 Everything else — auth, repo selection, PR loading — is owned by the Action environment (repo secrets, event payloads, the workflow checkout).
