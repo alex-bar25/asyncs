@@ -63,6 +63,14 @@ describe("resolveProvider", () => {
     expect(model).toBe("env-model");
   });
 
+  test("treats a blank key option as absent and falls back to the environment", () => {
+    clearEnv();
+    process.env.OPENAI_API_KEY = "env-key";
+    const { provider } = resolveProvider({ openAIApiKey: "" });
+
+    expect(provider.kind).toBe("openai");
+  });
+
   test("falls back to ASYNCS_PROVIDER when no provider option is given", () => {
     clearEnv();
     process.env.ASYNCS_PROVIDER = "anthropic";

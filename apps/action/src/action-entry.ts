@@ -1,5 +1,6 @@
 import type { Logger, ReviewRequest } from "@asyncs/core";
 import { runReviewAction } from "./action";
+import { DEFAULT_REVIEW_TIMEOUT_MS } from "./constants";
 import { readPullRequestEvent } from "./event";
 import { createReviewCommentClient } from "./github";
 import { parseReviewOptionsInput, type ParsedReviewOptions } from "./inputs";
@@ -67,6 +68,7 @@ export async function runActionEntry(env: Record<string, string | undefined>): P
       provider,
       model,
       repository: `${pullRequest.owner}/${pullRequest.repo}`,
+      timeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
     });
   };
 

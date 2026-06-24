@@ -1,5 +1,6 @@
 import { DEFAULT_REVIEW_REQUEST_OPTIONS, type ReviewRequest } from "@asyncs/core";
 import type { LocalDiffMode } from "@asyncs/diff";
+import { DEFAULT_REVIEW_TIMEOUT_MS } from "./constants";
 import { resolveProvider } from "./provider";
 import { reviewDiff } from "./runner";
 
@@ -26,6 +27,7 @@ export async function runSmoke(args: readonly string[]): Promise<string> {
     diff: parseDiffMode(args),
     provider,
     model,
+    timeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
   });
 
   const header = `${diff.baseRef}..${diff.headRef}, ${diff.skippedBinaries.length} binaries skipped`;

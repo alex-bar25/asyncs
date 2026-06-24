@@ -24,7 +24,9 @@ export type SplitOpenAIMessagesResult = {
   input: ResponseInput;
 };
 
-const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+// Reasoning models spend part of this budget on hidden reasoning tokens before any
+// visible output, so the cap has to be generous or structured output gets truncated.
+const DEFAULT_MAX_OUTPUT_TOKENS = 16384;
 
 export function splitOpenAIMessages(messages: readonly ProviderMessage[]): SplitOpenAIMessagesResult {
   const instructions: string[] = [];
@@ -94,11 +96,9 @@ export function createOpenAIProviderClient(options: OpenAIProviderClientOptions)
         request.signal === undefined ? undefined : { signal: request.signal },
       );
       const rawText = extractOutputText(response);
-      let object: unknown;
+      const object = parseJsonObject(rawText);
 
-      try {
-        object = JSON.parse(rawText);
-      } catch {
+      if (object === undefined) {
         throw new Error(`OpenAI provider did not return valid JSON for ${request.schemaName}.`);
       }
 
@@ -109,6 +109,39 @@ export function createOpenAIProviderClient(options: OpenAIProviderClientOptions)
       };
     },
   };
+}
+
+// Non-strict structured output can arrive wrapped in a markdown code fence or with
+// surrounding prose, so try the raw text, then a fenced body, then the outermost
+// brace span. Returns undefined when none of those parse.
+function parseJsonObject(rawText: string): unknown {
+  for (const candidate of jsonCandidates(rawText)) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      continue;
+    }
+  }
+
+  return undefined;
+}
+
+function jsonCandidates(rawText: string): string[] {
+  const trimmed = rawText.trim();
+  const candidates = [trimmed];
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fenced?.[1] !== undefined) {
+    candidates.push(fenced[1].trim());
+  }
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start !== -1 && end > start) {
+    candidates.push(trimmed.slice(start, end + 1));
+  }
+
+  return candidates;
 }
 
 function extractOutputText(response: Response): string {

@@ -27,9 +27,9 @@ export function resolveProvider(options: ResolveProviderOptions = {}): ResolvedP
 }
 
 function resolveOpenAIProvider(options: ResolveProviderOptions): ResolvedProvider {
-  const apiKey = options.openAIApiKey ?? process.env.OPENAI_API_KEY;
+  const apiKey = nonEmpty(options.openAIApiKey) ?? nonEmpty(process.env.OPENAI_API_KEY);
 
-  if (apiKey === undefined || apiKey.length === 0) {
+  if (apiKey === undefined) {
     throw new MissingApiKeyError("OpenAI", "OPENAI_API_KEY");
   }
 
@@ -44,9 +44,9 @@ function resolveOpenAIProvider(options: ResolveProviderOptions): ResolvedProvide
 }
 
 function resolveAnthropicProvider(options: ResolveProviderOptions): ResolvedProvider {
-  const apiKey = options.anthropicApiKey ?? process.env.ANTHROPIC_API_KEY;
+  const apiKey = nonEmpty(options.anthropicApiKey) ?? nonEmpty(process.env.ANTHROPIC_API_KEY);
 
-  if (apiKey === undefined || apiKey.length === 0) {
+  if (apiKey === undefined) {
     throw new MissingApiKeyError("Anthropic", "ANTHROPIC_API_KEY");
   }
 
@@ -58,6 +58,10 @@ function resolveAnthropicProvider(options: ResolveProviderOptions): ResolvedProv
   });
 
   return { provider, model };
+}
+
+function nonEmpty(value: string | undefined): string | undefined {
+  return value !== undefined && value.length > 0 ? value : undefined;
 }
 
 function resolveProviderKind(provider: string): "openai" | "anthropic" {

@@ -60,7 +60,7 @@ describe("createOpenAIProviderClient.generateText", () => {
     expect(firstCallArgs).toEqual([
       {
         model: "gpt-4.1",
-        max_output_tokens: 4096,
+        max_output_tokens: 16384,
         instructions: "Be precise.",
         input: [{ role: "user", content: "Review this PR." }],
       },
@@ -116,7 +116,7 @@ describe("createOpenAIProviderClient.generateObject", () => {
     expect(firstCallArgs).toEqual([
       {
         model: "gpt-4.1",
-        max_output_tokens: 4096,
+        max_output_tokens: 16384,
         input: [{ role: "user", content: "Plan the review." }],
         text: {
           format: {
@@ -129,6 +129,46 @@ describe("createOpenAIProviderClient.generateObject", () => {
       },
       undefined,
     ]);
+  });
+
+  test("parses JSON wrapped in a markdown code fence", async () => {
+    const output = { labels: ["security"], assignments: [] };
+    const fenced = "```json\n" + JSON.stringify(output) + "\n```";
+    const responsesCreate = mock(async () => fakeOpenAIResponse(fenced, { input: 3, output: 4 }));
+    const client = createOpenAIProviderClient({ apiKey: "test-key", gateway: { responsesCreate } });
+
+    if (client.generateObject === undefined) {
+      throw new Error("Expected generateObject support.");
+    }
+
+    const result = await client.generateObject({
+      model: "gpt-5.5",
+      schemaName: "CoordinatorAgentOutput",
+      schema: { type: "object" },
+      messages: [{ role: "user", content: "Plan the review." }],
+    });
+
+    expect(result.object).toEqual(output);
+  });
+
+  test("parses a JSON object surrounded by prose", async () => {
+    const output = { labels: ["backend"], assignments: [] };
+    const noisy = `Here is the plan:\n${JSON.stringify(output)}\nLet me know if you need more.`;
+    const responsesCreate = mock(async () => fakeOpenAIResponse(noisy, { input: 3, output: 4 }));
+    const client = createOpenAIProviderClient({ apiKey: "test-key", gateway: { responsesCreate } });
+
+    if (client.generateObject === undefined) {
+      throw new Error("Expected generateObject support.");
+    }
+
+    const result = await client.generateObject({
+      model: "gpt-5.5",
+      schemaName: "CoordinatorAgentOutput",
+      schema: { type: "object" },
+      messages: [{ role: "user", content: "Plan the review." }],
+    });
+
+    expect(result.object).toEqual(output);
   });
 
   test("throws with the schema name when JSON cannot be parsed", async () => {
