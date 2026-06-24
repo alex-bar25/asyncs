@@ -57,6 +57,12 @@ export async function runActionEntry(env: Record<string, string | undefined>): P
   const review = async (pullRequest: PullRequestEvent): Promise<ReviewRunResult> => {
     const { provider, model } = resolveProvider(resolveOptions);
 
+    consoleLogger.info("asyncs: starting review", {
+      provider: provider.kind,
+      model,
+      mode: reviewOptions.mode,
+    });
+
     const request: ReviewRequest = {
       mode: reviewOptions.mode,
       agents: reviewOptions.agents,
