@@ -3,103 +3,122 @@
 Real, unedited output from the asyncs pipeline reviewing its own change set, generated with:
 
 ```bash
-OPENAI_API_KEY=... bun run apps/action/src/smoke.ts
+OPENAI_API_KEY=... bun run apps/action/src/smoke.ts 43dbad8 HEAD
 ```
 
-Provider: OpenAI `gpt-4.1` · Mode: `low-noise`. The coordinator planned the review, specialist agents ran in parallel, and their findings were merged through the consensus engine. In a GitHub Action run the summary below is posted as a PR comment and each anchored finding becomes an inline comment.
+Provider: OpenAI `gpt-5.5` · Mode: `low-noise`. The coordinator planned the review, specialist agents ran in parallel, and their findings were merged through the consensus engine. In a GitHub Action run the summary below is posted as a PR comment and each anchored finding becomes an inline comment.
+
+> Note: the very first finding is a real latent bug the reviewer caught in this change set — empty-string API keys short-circuiting the environment fallback.
 
 ---
 
 # asyncs review
 
-Findings: 5
+Findings: 7
 Deduplicated findings: 0
 Suppressed noisy findings: 0
 
-### Testing - OpenAI and Anthropic provider selection and fallback logic is thoroughly tested with edge and error cases
-
-Severity: high
-Confidence: high
-Location: `apps/action/test/provider.test.ts:1`
-
-Why this matters:
-The tests in apps/action/test/provider.test.ts explicitly exercise key edge cases and decision logic for provider selection: (1) absence of API keys throws, (2) OpenAI is the default, (3) Anthropic is selected by input/provider/env, (4) explicit and environment model values are honored, and (5) fallback to ASYNCS_PROVIDER is tested. This covers the full matrix of decision branches relevant to provider fallback and option precedence. The new OpenAI provider implementation in packages/providers is tested for output parsing, schema requests, usage metadata, abort forwarding, and error handling on JSON parse failure in packages/providers/test/openai.test.ts.
-
-Evidence:
-
-- Throws if no API key for default (OpenAI) (test: 'throws MissingApiKeyError when no OpenAI key is available by default')
-- Coverage for OpenAI as default, Anthropic via explicit or env, model option/env precedence, and provider fallback
-- Error handling: JSON parse errors in generateObject tested
-- Ensures actual provider client kind matches requested
-- All new/rewritten provider logic branches exercised, not just the happy path
-
-Recommendation:
-No action needed; coverage is comprehensive for both selection branches and edge/error paths.
-
-### Testing - OpenAI provider request construction, abort logic, and error handling are regression tested
-
-Severity: high
-Confidence: high
-Location: `packages/providers/test/openai.test.ts:1`
-
-Why this matters:
-The new OpenAI provider code in packages/providers/src/openai.ts is directly exercised by packages/providers/test/openai.test.ts: tests check that 1) request payloads are built with correct field mapping, message splitting, and schema embedding; 2) abort signals are forwarded to the gateway; 3) output and usage are parsed from plausible API responses; and 4) failures to parse JSON from API response lead to explicit errors mentioning the schema name. Each path (simple text, object result, both success/error) is invoked and validated for downstream contract correctness.
-
-Evidence:
-
-- generateText test verifies correct field population and output parsing
-- generateObject test covers JSON schema prompt and strict: false field, usage propagation, and rawText
-- Test for abort signal forwards ensures robust cancellation handling
-- Error case when API returns non-JSON text is explicitly tested (throws on parse failure with schema name in message)
-
-Recommendation:
-No action required. All critical regression and behavior branches (including error and edge) are covered by the new tests.
-
-### Testing - Inline comment logger and skip warning edge case handling are now test-covered
+### Backend - Empty API key options prevent environment fallback
 
 Severity: medium
 Confidence: high
-Location: `apps/action/test/inlineComments.test.ts:167`
+Location: `apps/action/src/action-entry.ts:41`
 
 Why this matters:
-apps/action/test/inlineComments.test.ts adds an explicit test ("logs the file, line, and reason for each skipped inline comment") that mocks a client error, injects a logger, and inspects that the logger's warn() is called with the expected metadata—including file, line, and error message. This assures the fallback logic (skipping and warning on comment placement bad lines) is not just present but test-guaranteed to run. Previous tests only covered the skip increment, not correct logger metadata/content.
+The new key wiring treats an empty string as an explicit API key option. `runActionEntry` forwards `openAIApiKey`/`anthropicApiKey` whenever the environment property is defined, while `resolveProvider` uses nullish coalescing to choose the option before `process.env`. If the action/input layer supplies an empty string for an optional key, the resolver will not fall back to `process.env.OPENAI_API_KEY` or `process.env.ANTHROPIC_API_KEY`; it will throw `MissingApiKeyError` instead. That breaks the intended option-to-environment fallback behavior for API keys.
 
 Evidence:
-
-- A skipped inline comment triggers logger.warn
-- Test asserts meta includes file/line/reason
-- Paths failing comment creation are exercised by custom failCreateForPaths logic
-- Tests logger coupling, not just count of skipped comments
+`action-entry.ts` builds resolve options with `...(env.OPENAI_API_KEY === undefined ? {} : { openAIApiKey: env.OPENAI_API_KEY })` and the same pattern for Anthropic. In `apps/action/src/provider.ts`, `resolveOpenAIProvider` does `const apiKey = options.openAIApiKey ?? process.env.OPENAI_API_KEY;` and then throws when `apiKey.length === 0`; Anthropic uses the same pattern.
 
 Recommendation:
-No action needed; test covers both structural ('skipped') and behavioral (logging metadata) edge cases.
+Treat blank key values as absent before passing them into `resolveProvider`, or normalize inside the resolver, e.g. `const apiKey = nonEmpty(options.openAIApiKey) ?? nonEmpty(process.env.OPENAI_API_KEY)`, and apply the same rule for Anthropic.
 
-### Backend - Correct API key handling and provider selection—no critical logic errors
+### Security - README example omits least-privilege GITHUB_TOKEN permissions
+
+Severity: medium
+Confidence: high
+Location: `README.md:53`
+
+Why this matters:
+The usage example relies on the action's default `github-token` (`github.token`) but does not show a `permissions` block. Users copying this workflow will inherit their repository/org default token permissions, which may be broader than the action needs for reading contents and posting PR review comments.
+
+Evidence:
+The README workflow snippet shows `- uses: alex-bar25/asyncs/apps/action@v1` with `openai-api-key`, `mode`, and `agents`, but no `permissions:` block. In `apps/action/action.yml`, `github-token` defaults to `${{ github.token }}` and is passed as `GITHUB_TOKEN` to the action.
+
+Recommendation:
+Add a least-privilege permissions block to the documented workflow, for example `permissions: { contents: read, pull-requests: write }` (and any additional permission only if required by the comment implementation).
+
+### Testing - Action input-to-resolver mapping is not regression tested
+
+Severity: medium
+Confidence: high
+Location: `apps/action/src/action-entry.ts:39`
+
+Why this matters:
+The provider migration added a new integration seam between the GitHub Action YAML inputs and `resolveProvider`, but the changed tests exercise `resolveProvider` directly rather than the action-entry environment mapping. `action.yml` now maps `inputs.provider`, `inputs.openai-api-key`, and `inputs.anthropic-api-key` into `ASYNCS_PROVIDER_INPUT`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY`; `runActionEntry` then translates those raw env values into `resolveOptions`. A regression in this mapping would not be caught by the current provider tests because they call `resolveProvider({ openAIApiKey: "test-key" })` and `resolveProvider({ provider: "anthropic", anthropicApiKey: "test-key" })` directly.
+
+Evidence:
+`runActionEntry` builds `resolveOptions` from `ASYNCS_PROVIDER_INPUT`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY`, while `apps/action/test/provider.test.ts` only invokes `resolveProvider` directly with already-normalized option names. `apps/action/action.yml` is also changed to provide those env vars from YAML inputs.
+
+Recommendation:
+Add an action-entry-level test, or extract and test the env-to-resolver-options helper, covering at least default OpenAI input mapping, explicit `provider: anthropic` with `ANTHROPIC_API_KEY`, empty optional input strings, and model forwarding.
+
+### Testing - OpenAI tests miss empty and incomplete Responses API outputs
+
+Severity: medium
+Confidence: high
+Location: `packages/providers/src/openai.ts:106`
+
+Why this matters:
+The OpenAI provider parser has behavior for missing output that is not covered: `extractOutputText` iterates `response.output` and returns `texts.join("")`, so an empty output, non-message output, or message without `output_text` becomes an empty string. The current tests always create a completed message with one `output_text` item and `incomplete_details: null`; the JSON parse failure test uses a normal text output of `"not json"`, not an empty/incomplete API response. This leaves the provider’s behavior on incomplete Responses API results unpinned.
+
+Evidence:
+`fakeOpenAIResponse` in `packages/providers/test/openai.test.ts` always sets `incomplete_details: null`, `error: null`, and `output` to a completed assistant message containing `{ type: "output_text", text: outputText }`; `extractOutputText` in `packages/providers/src/openai.ts` silently returns an empty string when no such content is present.
+
+Recommendation:
+Add tests for `response.output: []`, output items without `output_text`, and responses with `incomplete_details` or `error` populated. Assert the intended contract explicitly, preferably that incomplete/empty model responses fail with a diagnostic error rather than being treated as a valid empty result.
+
+### Testing - Provider precedence and error branches are only partially covered
+
+Severity: medium
+Confidence: high
+Location: `apps/action/test/provider.test.ts:31`
+
+Why this matters:
+The resolver tests cover the happy paths for default OpenAI, explicit Anthropic, model precedence, and `ASYNCS_PROVIDER` fallback, but newly added error and precedence branches are not pinned. `provider.ts` introduces `UnknownProviderError`, option-vs-env provider selection, and a separate Anthropic missing-key branch; the supplied test file does not exercise invalid provider input, explicit `options.provider` overriding `ASYNCS_PROVIDER`, or `provider: "anthropic"` without an Anthropic key.
+
+Evidence:
+`apps/action/src/provider.ts` throws `UnknownProviderError` from `resolveProviderKind` for unsupported providers and selects `options.provider ?? process.env.ASYNCS_PROVIDER ?? "openai"`. The changed `provider.test.ts` includes tests for missing default OpenAI key, OpenAI default, Anthropic requested, model option/env, and `ASYNCS_PROVIDER` fallback, but no invalid-provider, explicit-provider-over-env, or missing-Anthropic-key test.
+
+Recommendation:
+Extend `provider.test.ts` with focused cases for unsupported provider names, explicit provider taking precedence over `ASYNCS_PROVIDER`, and missing API key errors for the Anthropic branch.
+
+### DevOps - CI installs an unpinned Bun version
+
+Severity: medium
+Confidence: high
+Location: `.github/workflows/ci.yml:16`
+
+Why this matters:
+The new CI workflow uses `bun-version: latest`, so every run can pick up a different Bun release. Because the workflow also enforces `bun install --frozen-lockfile` and runs the repository-wide check command, a Bun runtime change could break otherwise unchanged commits or make failures hard to reproduce locally.
+
+Evidence:
+`.github/workflows/ci.yml` configures `uses: oven-sh/setup-bun@v2` with `bun-version: latest`, then runs `bun install --frozen-lockfile` and `bun run check`.
+
+Recommendation:
+Pin Bun to a specific known-good version, or to a version sourced from a checked-in tool/version file, and update it deliberately in its own PR.
+
+### Security - CI workflow uses mutable third-party action tags
 
 Severity: low
 Confidence: high
-Location: `apps/action/src/provider.ts:1`
+Location: `.github/workflows/ci.yml:12`
 
 Why this matters:
-The code uses explicit, layered resolution of API keys and provider selection. It falls back from options to environment variables, and defaults correctly to OpenAI. Error cases for missing API keys and unknown providers are covered by custom errors. The model and tokens logic is precise, and test coverage asserts fallbacks as well as error branch behavior for both providers. There is no evidence of backwards compatibility breakage: Anthropic-specific keys/environment variables are supported as before where provider=anthropic, and OpenAI is now preferred otherwise. The review entrypoint now constructs and passes provider/model correctly, with no train-leakage across action boundaries.
+The new CI workflow executes external actions by version tags rather than immutable commit SHAs. If a referenced tag is moved or the upstream action is compromised, CI will execute unexpected code with the workflow's token context.
 
 Evidence:
-See apps/action/src/provider.ts: resolveProvider(), error handling, and fallbacks; robust tests in apps/action/test/provider.test.ts.
+`.github/workflows/ci.yml` uses `actions/checkout@v4` and `oven-sh/setup-bun@v2`. These are tag references, not pinned commit SHAs. The workflow does limit `GITHUB_TOKEN` to `contents: read`, which reduces impact but does not provide action-code integrity.
 
 Recommendation:
-No change needed. The fallbacks, selection, and error flows are correct and robust.
-
-### Architecture - Provider system refactoring maintains clear layering and extensibility
-
-Severity: low
-Confidence: high
-Location: `apps/action/src/provider.ts:1`
-
-Why this matters:
-The new provider resolution flow in `apps/action/src/provider.ts` introduces clean abstraction boundaries, letting the provider type (OpenAI or Anthropic) be selected at runtime via environment or input. Provider-specific logic is split into `resolveOpenAIProvider` and `resolveAnthropicProvider`, narrowing conditional logic and future-proofing extensibility. The `ResolvedProvider` contract is stable and abstracted from core usage. Custom error classes (`MissingApiKeyError`, `UnknownProviderError`) provide early, layer-appropriate error signaling. Provider kind checking leverages a shared utility from `packages/providers/src/constants.ts`, not duplicating logic. The typed options for keys and provider names enable backward-compatible fallback to prior behavior (Anthropic-or-OpenAI via env or explicit input), and the interface anticipates further providers in future with minimal change to core code.
-
-Evidence:
-The top-level `resolveProvider()` delegates by provider kind, with only stable return shape (`ResolvedProvider`). Each provider function (OpenAI/Anthropic) uses clearly typed options and environmental fallback. Error classes narrowly scoped to error cases, and kind validation is funneled through a shared utility. No core-layer import leaks, and the caller (in action-entry.ts and smoke.ts) is unchanged semantically from a type perspective, making the change backward compatible and not leaking provider details up.
-
-Recommendation:
-No change needed; the layering and delegation approach is robust and maintains system extensibility. If new providers are added, continue this pattern. Downstream call sites need not change if following the current contract.
+Pin third-party actions to full commit SHAs, and use Dependabot/Renovate to keep those pins updated.

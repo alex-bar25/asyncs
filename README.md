@@ -82,11 +82,11 @@ The changed code is read from the checked-out git commit range (`base..head`), w
 
 ## Example output
 
-asyncs reviewing its own change set with OpenAI `gpt-4.1` in `low-noise` mode — the coordinator planned the review, three specialist agents ran in parallel, and the consensus engine merged their findings. One of the five findings:
+asyncs reviewing its own change set with OpenAI `gpt-5.5` in `low-noise` mode — the coordinator planned the review, specialist agents ran in parallel, and the consensus engine merged their findings. One of the seven findings (a real latent bug it caught in this very change set):
 
-> **Testing — OpenAI provider request construction, abort logic, and error handling are regression tested** _(high severity, high confidence — `packages/providers/test/openai.test.ts`)_
+> **Backend — Empty API key options prevent environment fallback** _(medium severity, high confidence — `apps/action/src/action-entry.ts`)_
 >
-> The new OpenAI provider is directly exercised: request-payload construction, abort-signal forwarding, output/usage parsing, and JSON-parse error handling are each validated.
+> An empty-string key option is treated as explicit, so `resolveProvider`'s `options.openAIApiKey ?? process.env.OPENAI_API_KEY` never falls back to the environment and throws `MissingApiKeyError` instead. _Recommendation: treat blank key values as absent before resolving._
 
 See [`examples/sample-review.md`](examples/sample-review.md) for the full, unedited run.
 
