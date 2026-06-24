@@ -117,3 +117,7 @@ bun run check   # typecheck + lint + format check + tests
 - Low noise by default: one strong comment beats five weak ones.
 - Provider agnostic: vendor-specific code stays behind a small provider interface.
 - Hackable and open source: the engine is a library; the Action is a thin shell around it.
+
+## License
+
+[MIT](LICENSE) © Vlad Alex Barbatescu
